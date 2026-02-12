@@ -4,8 +4,6 @@ import {
   handler,
   CronCapability,
   EVMClient,
-  type EVMLog,
-  LogTriggerCapability,
   encodeCallMsg,
   getNetwork,
   hexToBase64,
@@ -19,10 +17,12 @@ import {
   decodeFunctionResult,
   encodeFunctionData,
   zeroAddress,
-  decodeEventLog,
 } from "viem";
 import { z } from "zod";
-import { ComplianceRegistryAbi, FundVaultAbi } from "../contracts/abi";
+import { ComplianceRegistryAbi } from "../contracts/abi";
+import { ChainalysisClient } from "../shared/chainalysis";
+import { PinataClient } from "../shared/pinata";
+import { StructuredLogger, withErrorHandling } from "../shared/utils";
 
 // Configuration schema
 const configSchema = z.object({
@@ -30,37 +30,26 @@ const configSchema = z.object({
   complianceRegistryAddress: z.string(),
   chainSelectorName: z.string(),
   gasLimit: z.string(),
-  apiEndpoints: z.object({
-    chainalysis: z.string(),
-    ofacScreening: z.string(),
+  secrets: z.object({
+    chainalysisApiKey: z.string(),
+    pinataApiKey: z.string(),
+    pinataApiSecret: z.string(),
   }),
 });
 
 type Config = z.infer<typeof configSchema>;
 
 /**
- * Compliance Screening Workflow
+ * PRODUCTION Compliance Screening Workflow
  *
- * This workflow monitors investor deposits and performs enhanced KYC/AML screening:
- * 1. Listens for Deposited events from FundVault
- * 2. Screens investor address against sanctions lists (OFAC, UN)
- * 3. Checks Chainalysis for on-chain risk indicators
- * 4. Updates ComplianceRegistry with screening results
- *
- * NOTE: In this demo, we'll use a simple cron-based approach
- * In production, use LogTrigger to react to Deposited events
+ * Performs comprehensive KYC/AML screening using:
+ * - Chainalysis KYT for sanctions and risk assessment
+ * - IPFS (Pinata) for audit trail storage
+ * - On-chain ComplianceRegistry updates
  */
 
-// Utility function to safely stringify objects with bigints
-const safeJsonStringify = (obj: any): string =>
-  JSON.stringify(
-    obj,
-    (_, value) => (typeof value === "bigint" ? value.toString() : value),
-    2,
-  );
-
 /**
- * Check if address is compliant in the registry
+ * Get compliance status from ComplianceRegistry
  */
 const getComplianceStatus = (
   runtime: Runtime<Config>,
@@ -110,48 +99,75 @@ const getComplianceStatus = (
 };
 
 /**
- * Perform off-chain compliance screening
- *
- * TODO: In production, integrate with:
- * - Chainalysis KYT API
- * - OFAC Sanctions Screening API
- * - TRM Labs / Elliptic for transaction monitoring
- * - AI-based risk scoring (Claude/GPT for pattern analysis)
+ * Perform comprehensive compliance screening using Chainalysis
  */
-const performOffChainScreening = (
+const performComplianceScreening = async (
   runtime: Runtime<Config>,
   investorAddress: Address,
-): { shouldApprove: boolean; riskScore: number; reason: string } => {
-  runtime.log(`🔍 Screening address: ${investorAddress}`);
+): Promise<{
+  shouldApprove: boolean;
+  riskScore: number;
+  reason: string;
+  ipfsHash: string;
+}> => {
+  const logger = new StructuredLogger(runtime);
 
-  // Simple heuristic for demo purposes
-  // In production, call actual compliance APIs here
-  const addressLower = investorAddress.toLowerCase();
+  // Initialize API clients
+  const chainalysis = new ChainalysisClient(
+    runtime,
+    runtime.config.secrets.chainalysisApiKey,
+  );
+  const pinata = new PinataClient(
+    runtime,
+    runtime.config.secrets.pinataApiKey,
+    runtime.config.secrets.pinataApiSecret,
+  );
 
-  // Check for known test addresses or patterns
-  const isTestAddress =
-    addressLower.includes("dead") || addressLower.includes("beef");
+  logger.info("Starting Chainalysis screening", { address: investorAddress });
 
-  if (isTestAddress) {
-    runtime.log(`⚠️  Test address detected - flagging as high risk`);
-    return {
-      shouldApprove: false,
-      riskScore: 85,
-      reason: "Test address pattern detected",
-    };
-  }
+  // Screen address with Chainalysis
+  const screeningResult = await chainalysis.screenAddress(investorAddress);
 
-  // Default: approve with low risk
-  runtime.log(`✅ Address appears clean`);
+  logger.info("Chainalysis screening complete", {
+    address: investorAddress,
+    isSanctioned: screeningResult.isSanctioned,
+    riskScore: screeningResult.riskScore,
+  });
+
+  // Determine approval based on Chainalysis results
+  const shouldApprove =
+    !screeningResult.isSanctioned && screeningResult.riskScore < 50;
+
+  // Upload detailed report to IPFS
+  const ipfsHash = await pinata.uploadComplianceReport({
+    timestamp: Date.now(),
+    address: investorAddress,
+    kycVerified: shouldApprove,
+    sanctioned: screeningResult.isSanctioned,
+    riskScore: screeningResult.riskScore,
+    details: {
+      exposures: screeningResult.exposures,
+      confidence: screeningResult.confidence,
+      detailedReport: screeningResult.detailedReport,
+    },
+  });
+
+  logger.success("Compliance report uploaded to IPFS", { ipfsHash });
+
   return {
-    shouldApprove: true,
-    riskScore: 10,
-    reason: "No red flags detected",
+    shouldApprove,
+    riskScore: screeningResult.riskScore,
+    reason: screeningResult.isSanctioned
+      ? "Address flagged on sanctions list"
+      : screeningResult.riskScore >= 50
+        ? `High risk score: ${screeningResult.riskScore}/100`
+        : "No compliance issues detected",
+    ipfsHash,
   };
 };
 
 /**
- * Update compliance status in ComplianceRegistry
+ * Update ComplianceRegistry with screening results
  */
 const updateComplianceStatus = (
   runtime: Runtime<Config>,
@@ -172,19 +188,20 @@ const updateComplianceStatus = (
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
+  const logger = new StructuredLogger(runtime);
 
-  runtime.log(
-    `🔄 Updating compliance: ${investorAddress} | KYC: ${isKYCVerified} | Sanctioned: ${isSanctioned}`,
-  );
+  logger.info("Updating ComplianceRegistry", {
+    address: investorAddress,
+    kycVerified: isKYCVerified,
+    sanctioned: isSanctioned,
+  });
 
-  // Encode the contract call for updateCompliance(address investor, bool kycVerified, bool sanctioned)
   const callData = encodeFunctionData({
     abi: ComplianceRegistryAbi,
     functionName: "updateCompliance",
     args: [investorAddress, isKYCVerified, isSanctioned],
   });
 
-  // Generate report using consensus capability
   const reportResponse = runtime
     .report({
       encodedPayload: hexToBase64(callData),
@@ -204,81 +221,88 @@ const updateComplianceStatus = (
     })
     .result();
 
-  const txStatus = resp.txStatus;
-
-  if (txStatus !== TxStatus.SUCCESS) {
+  if (resp.txStatus !== TxStatus.SUCCESS) {
     throw new Error(
-      `Failed to update ComplianceRegistry: ${resp.errorMessage || txStatus}`,
+      `Failed to update ComplianceRegistry: ${resp.errorMessage || resp.txStatus}`,
     );
   }
 
-  const txHash = resp.txHash || new Uint8Array(32);
-
-  runtime.log(`✅ ComplianceRegistry updated! TxHash: ${bytesToHex(txHash)}`);
-
-  return bytesToHex(txHash);
-};
-
-/**
- * Main workflow logic: Compliance Screening
- */
-const performComplianceScreening = (runtime: Runtime<Config>): string => {
-  runtime.log("🚀 Starting Compliance Screening...");
-
-  // For demo purposes, screen a hardcoded test address
-  // In production with LogTrigger, extract investor from Deposited event
-  const testInvestor = "0x1234567890123456789012345678901234567890" as Address;
-
-  runtime.log(`👤 Screening investor: ${testInvestor}`);
-
-  // Step 1: Check current compliance status
-  const currentStatus = getComplianceStatus(runtime, testInvestor);
-  runtime.log(
-    `📊 Current status: KYC=${currentStatus.isKYCVerified}, Sanctioned=${currentStatus.isSanctioned}`,
-  );
-
-  // Step 2: Perform off-chain compliance screening
-  const screeningResult = performOffChainScreening(runtime, testInvestor);
-  runtime.log(
-    `📋 Screening result: ${screeningResult.reason} (risk: ${screeningResult.riskScore})`,
-  );
-
-  // Step 3: Determine new compliance status
-  const shouldUpdate =
-    currentStatus.isKYCVerified !== screeningResult.shouldApprove ||
-    currentStatus.isSanctioned !== !screeningResult.shouldApprove;
-
-  if (!shouldUpdate) {
-    runtime.log(`⏭️  No update needed - status unchanged`);
-    return "No update required";
-  }
-
-  // Step 4: Update ComplianceRegistry
-  const txHash = updateComplianceStatus(
-    runtime,
-    testInvestor,
-    screeningResult.shouldApprove, // KYC verified
-    !screeningResult.shouldApprove, // Sanctioned (inverse of approval)
-  );
-
-  runtime.log("✅ Compliance Screening Complete!");
+  const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
+  logger.success("ComplianceRegistry updated", { txHash });
 
   return txHash;
 };
 
 /**
- * Handle cron trigger
+ * Main workflow logic
  */
-const onCronTrigger = (
+const runComplianceWorkflow = async (
   runtime: Runtime<Config>,
-  payload: CronPayload,
-): string => {
-  runtime.log(`⏰ Cron triggered - starting compliance screening`);
-  return performComplianceScreening(runtime);
+): Promise<string> => {
+  const logger = new StructuredLogger(runtime);
+
+  logger.info("🚀 Starting Production Compliance Screening Workflow");
+
+  // For demo: screen a test address
+  // In production with LogTrigger: extract from Deposited event
+  const testInvestor = "0x1234567890123456789012345678901234567890" as Address;
+
+  return withErrorHandling(
+    async () => {
+      // Step 1: Check current status
+      const currentStatus = getComplianceStatus(runtime, testInvestor);
+      logger.info("Current compliance status", currentStatus);
+
+      // Step 2: Perform Chainalysis screening
+      const screening = await performComplianceScreening(runtime, testInvestor);
+      logger.info("Screening complete", {
+        shouldApprove: screening.shouldApprove,
+        riskScore: screening.riskScore,
+        ipfsHash: screening.ipfsHash,
+      });
+
+      // Step 3: Check if update needed
+      const needsUpdate =
+        currentStatus.isKYCVerified !== screening.shouldApprove ||
+        currentStatus.isSanctioned !== !screening.shouldApprove;
+
+      if (!needsUpdate) {
+        logger.info("No update needed - status unchanged");
+        return "No update required";
+      }
+
+      // Step 4: Update ComplianceRegistry
+      const txHash = updateComplianceStatus(
+        runtime,
+        testInvestor,
+        screening.shouldApprove,
+        !screening.shouldApprove,
+      );
+
+      logger.success("✅ Compliance Screening Complete", {
+        txHash,
+        ipfsHash: screening.ipfsHash,
+      });
+
+      return txHash;
+    },
+    { operation: "Compliance Screening", runtime },
+  );
 };
 
 /**
- * Initialize workflow with cron trigger
+ * Cron trigger handler
+ */
+const onCronTrigger = async (
+  runtime: Runtime<Config>,
+  payload: CronPayload,
+): Promise<string> => {
+  runtime.log("⏰ Cron triggered - starting compliance screening");
+  return runComplianceWorkflow(runtime);
+};
+
+/**
+ * Initialize workflow
  */
 const initWorkflow = (config: Config) => {
   const cronTrigger = new CronCapability();

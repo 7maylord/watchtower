@@ -3,8 +3,9 @@
   "complianceRegistryAddress": "0x06e5Bab3816f49c4DEdF8A4bfF0779346626Eaa0",
   "chainSelectorName": "ethereum-testnet-sepolia",
   "gasLimit": "5000000",
-  "apiEndpoints": {
-    "chainalysis": "https://api.chainalysis.com/api/kyt/v1/users",
-    "ofacScreening": "https://sanctionsapi.example.com/screen"
+  "secrets": {
+    "chainalysisApiKey": "${CHAINALYSIS_API_KEY}",
+    "pinataApiKey": "${PINATA_API_KEY}",
+    "pinataApiSecret": "${PINATA_API_SECRET}"
   }
 }

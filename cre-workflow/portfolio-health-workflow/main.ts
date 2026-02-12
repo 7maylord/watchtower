@@ -20,6 +20,9 @@ import {
 } from "viem";
 import { z } from "zod";
 import { FundVaultAbi, RiskOracleAbi } from "../contracts/abi";
+import { GeminiClient } from "../shared/gemini";
+import { PinataClient } from "../shared/pinata";
+import { StructuredLogger, withErrorHandling } from "../shared/utils";
 
 // Configuration schema
 const configSchema = z.object({
@@ -32,22 +35,25 @@ const configSchema = z.object({
     low: z.number(),
     medium: z.number(),
     high: z.number(),
-    critical: z.number(),
+    updateThreshold: z.number(),
+  }),
+  secrets: z.object({
+    geminiApiKey: z.string(),
+    pinataApiKey: z.string(),
+    pinataApiSecret: z.string(),
   }),
 });
 
 type Config = z.infer<typeof configSchema>;
 
-// Utility function to safely stringify objects with bigints
-const safeJsonStringify = (obj: any): string =>
-  JSON.stringify(
-    obj,
-    (_, value) => (typeof value === "bigint" ? value.toString() : value),
-    2,
-  );
+/**
+ * PRODUCTION Portfolio Health Monitoring Workflow
+ *
+ * Uses Gemini AI for comprehensive risk analysis and Pinata IPFS for report storage
+ */
 
 /**
- * Read total assets from FundVault contract
+ * Get total assets from FundVault
  */
 const getTotalAssets = (runtime: Runtime<Config>): bigint => {
   const network = getNetwork({
@@ -64,13 +70,10 @@ const getTotalAssets = (runtime: Runtime<Config>): bigint => {
 
   const evmClient = new EVMClient(network.chainSelector.selector);
 
-  // Encode the contract call for totalAssets()
   const callData = encodeFunctionData({
     abi: FundVaultAbi,
     functionName: "totalAssets",
   });
-
-  runtime.log("📊 Fetching total assets from FundVault...");
 
   const contractCall = evmClient
     .callContract(runtime, {
@@ -83,18 +86,17 @@ const getTotalAssets = (runtime: Runtime<Config>): bigint => {
     })
     .result();
 
-  // Decode the result
   const totalAssets = decodeFunctionResult({
     abi: FundVaultAbi,
     functionName: "totalAssets",
     data: bytesToHex(contractCall.data),
   });
 
-  return totalAssets;
+  return totalAssets as bigint;
 };
 
 /**
- * Read current risk score from RiskOracle
+ * Get current risk score from RiskOracle
  */
 const getCurrentRiskScore = (runtime: Runtime<Config>): bigint => {
   const network = getNetwork({
@@ -133,67 +135,85 @@ const getCurrentRiskScore = (runtime: Runtime<Config>): bigint => {
     data: bytesToHex(contractCall.data),
   }) as readonly [bigint, bigint, string];
 
-  return result[0]; // Return only the score (uint256 = bigint)
+  return result[0];
 };
 
 /**
- * Calculate risk score based on portfolio metrics
- *
- * For now, thisimplementation uses a simple heuristic:
- * - Low risk (0-30): Small portfolio size (<  $10k USDC)
- * - Medium risk (31-50): Medium portfolio ($10k-$100k)
- * - High risk (51-70): Large portfolio ($100k-$1M)
- * - Critical risk (71-100): Very large (>$1M) or other risk factors
- *
- * TODO: In production, this should integrate:
- * - DeFi protocol health APIs (Aave, Compound)
- * - AI model for risk analysis (Claude/GPT)
- * - Market volatility indicators
- * - Counterparty risk metrics
+ * Calculate risk score using Gemini AI
  */
-const calculateRiskScore = (
+const calculateRiskScore = async (
   runtime: Runtime<Config>,
-  totalAssets: bigint,
-): number => {
-  // Convert from 6 decimals (USDC) to human-readable
-  const assetsInUSDC = Number(totalAssets) / 1e6;
+  portfolioData: { totalAssets: bigint; currentRiskScore: bigint },
+): Promise<{
+  riskScore: number;
+  analysis: string;
+  recommendations: string[];
+}> => {
+  const logger = new StructuredLogger(runtime);
+  const gemini = new GeminiClient(runtime, runtime.config.secrets.geminiApiKey);
 
-  runtime.log(`💰 Portfolio size: $${assetsInUSDC.toLocaleString()} USDC`);
+  const assetsInUSDC = Number(portfolioData.totalAssets) / 1e6;
 
-  // Simple risk calculation based on portfolio size
-  let riskScore: number;
+  logger.info("Requesting Gemini AI risk analysis", {
+    totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+    currentRiskScore: Number(portfolioData.currentRiskScore),
+  });
 
-  if (assetsInUSDC < 10000) {
-    // Small portfolio: low risk
-    riskScore = 20;
-  } else if (assetsInUSDC < 100000) {
-    // Medium portfolio: moderate risk
-    riskScore = 40;
-  } else if (assetsInUSDC < 1000000) {
-    // Large portfolio: elevated risk
-    riskScore = 60;
-  } else {
-    // Very large portfolio: high risk
-    riskScore = 75;
+  // Use Gemini for comprehensive risk analysis
+  const analysis = await gemini.analyzePortfolioRisk({
+    totalAssets: `$${assetsInUSDC.toLocaleString()} USDC`,
+    currentRiskScore: Number(portfolioData.currentRiskScore),
+    marketConditions: "Moderate volatility in DeFi markets",
+  });
+
+  // Extract risk score from analysis
+  const riskScore = extractRiskScoreFromAnalysis(
+    analysis.analysis,
+    assetsInUSDC,
+  );
+
+  logger.success("Gemini analysis complete", {
+    riskScore,
+    confidence: analysis.confidence,
+    recommendationCount: analysis.recommendations.length,
+  });
+
+  return {
+    riskScore,
+    analysis: analysis.analysis,
+    recommendations: analysis.recommendations,
+  };
+};
+
+/**
+ * Extract risk score from Gemini's analysis
+ */
+function extractRiskScoreFromAnalysis(
+  analysis: string,
+  portfolioSize: number,
+): number {
+  // Look for explicit score in analysis
+  const scoreMatch = analysis.match(
+    /(?:risk\s+score|score)[:\s]+(\d+)(?:\/100)?/i,
+  );
+  if (scoreMatch) {
+    return parseInt(scoreMatch[1]);
   }
 
-  // TODO: Add additional risk factors here:
-  // - Protocol health scores
-  // - Market volatility
-  // - Concentration risk
-  // - AI-based predictions
-
-  runtime.log(`📈 Calculated risk score: ${riskScore}/100`);
-
-  return riskScore;
-};
+  // Fallback: heuristic based on portfolio size
+  if (portfolioSize === 0) return 20;
+  if (portfolioSize < 10000) return 25;
+  if (portfolioSize < 100000) return 35;
+  if (portfolioSize < 1000000) return 45;
+  return 55;
+}
 
 /**
- * Update RiskOracle with new risk score
+ * Update RiskOracle with new score
  */
 const updateRiskOracle = (
   runtime: Runtime<Config>,
-  riskScore: number,
+  newRiskScore: number,
   ipfsHash: string,
 ): string => {
   const network = getNetwork({
@@ -209,19 +229,16 @@ const updateRiskOracle = (
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
+  const logger = new StructuredLogger(runtime);
 
-  runtime.log(
-    `🔄 Updating RiskOracle with score: ${riskScore}, hash: ${ipfsHash}`,
-  );
+  logger.info("Updating RiskOracle", { newRiskScore, ipfsHash });
 
-  // Encode the contract call for updateRiskScore(uint256 newScore, string memory reportHash)
   const callData = encodeFunctionData({
     abi: RiskOracleAbi,
     functionName: "updateRiskScore",
-    args: [BigInt(riskScore), ipfsHash],
+    args: [BigInt(newRiskScore), ipfsHash],
   });
 
-  // Generate report using consensus capability
   const reportResponse = runtime
     .report({
       encodedPayload: hexToBase64(callData),
@@ -241,71 +258,106 @@ const updateRiskOracle = (
     })
     .result();
 
-  const txStatus = resp.txStatus;
-
-  if (txStatus !== TxStatus.SUCCESS) {
+  if (resp.txStatus !== TxStatus.SUCCESS) {
     throw new Error(
-      `Failed to update RiskOracle: ${resp.errorMessage || txStatus}`,
+      `Failed to update RiskOracle: ${resp.errorMessage || resp.txStatus}`,
     );
   }
 
-  const txHash = resp.txHash || new Uint8Array(32);
-
-  runtime.log(`✅ RiskOracle updated! TxHash: ${bytesToHex(txHash)}`);
-
-  return bytesToHex(txHash);
-};
-
-/**
- * Main workflow logic: Portfolio Health Monitoring
- */
-const monitorPortfolioHealth = (runtime: Runtime<Config>): string => {
-  runtime.log("🚀 Starting Portfolio Health Monitoring...");
-
-  // Step 1: Read total assets from FundVault
-  const totalAssets = getTotalAssets(runtime);
-
-  // Step 2: Get current risk score
-  const currentScore = getCurrentRiskScore(runtime);
-  runtime.log(`📊 Current risk score: ${currentScore}`);
-
-  // Step 3: Calculate new risk score based on portfolio metrics
-  const newRiskScore = calculateRiskScore(runtime, totalAssets);
-
-  // Step 4: Check if update is needed (only update if score changed by >= 5 points)
-  const scoreDiff = Math.abs(Number(currentScore) - newRiskScore);
-
-  if (scoreDiff < 5) {
-    runtime.log(`⏭️  Score change too small (${scoreDiff}), skipping update`);
-    return `No update needed. Current: ${currentScore}, New: ${newRiskScore}`;
-  }
-
-  // Step 5: Generate IPFS hash for detailed report
-  // TODO: In production, upload detailed risk analysis to IPFS
-  const ipfsHash = `QmRiskReport${newRiskScore}`; // Placeholder hash
-
-  // Step 6: Update RiskOracle
-  const txHash = updateRiskOracle(runtime, newRiskScore, ipfsHash);
-
-  runtime.log("✅ Portfolio Health Monitoring Complete!");
+  const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
+  logger.success("RiskOracle updated", { txHash });
 
   return txHash;
 };
 
 /**
- * Handle cron trigger
+ * Main workflow logic
  */
-const onCronTrigger = (
+const runPortfolioHealthWorkflow = async (
   runtime: Runtime<Config>,
-  payload: CronPayload,
-): string => {
-  runtime.log(`⏰ Cron triggered - starting portfolio health check`);
+): Promise<string> => {
+  const logger = new StructuredLogger(runtime);
 
-  return monitorPortfolioHealth(runtime);
+  logger.info("🚀 Starting Production Portfolio Health Monitoring");
+
+  return withErrorHandling(
+    async () => {
+      // Step 1: Read portfolio data
+      const totalAssets = getTotalAssets(runtime);
+      const currentScore = getCurrentRiskScore(runtime);
+
+      logger.info("Portfolio data retrieved", {
+        totalAssets: `$${(Number(totalAssets) / 1e6).toLocaleString()}`,
+        currentScore: Number(currentScore),
+      });
+
+      // Step 2: Calculate new risk score using Gemini AI
+      const riskAnalysis = await calculateRiskScore(runtime, {
+        totalAssets,
+        currentRiskScore: currentScore,
+      });
+
+      // Step 3: Check if update needed
+      const scoreDiff = Math.abs(Number(currentScore) - riskAnalysis.riskScore);
+
+      if (scoreDiff < runtime.config.riskThresholds.updateThreshold) {
+        logger.info("Score change too small, skipping update", {
+          diff: scoreDiff,
+          threshold: runtime.config.riskThresholds.updateThreshold,
+        });
+        return "No update needed";
+      }
+
+      // Step 4: Upload detailed report to IPFS
+      const pinata = new PinataClient(
+        runtime,
+        runtime.config.secrets.pinataApiKey,
+        runtime.config.secrets.pinataApiSecret,
+      );
+
+      const ipfsHash = await pinata.uploadRiskReport({
+        timestamp: Date.now(),
+        riskScore: riskAnalysis.riskScore,
+        portfolioSize: `$${(Number(totalAssets) / 1e6).toLocaleString()} USDC`,
+        analysis: riskAnalysis.analysis,
+        recommendations: riskAnalysis.recommendations,
+        dataSource: "Gemini AI Analysis",
+      });
+
+      logger.success("Risk report uploaded to IPFS", { ipfsHash });
+
+      // Step 5: Update RiskOracle
+      const txHash = updateRiskOracle(
+        runtime,
+        riskAnalysis.riskScore,
+        ipfsHash,
+      );
+
+      logger.success("✅ Portfolio Health Monitoring Complete", {
+        txHash,
+        ipfsHash,
+        newRiskScore: riskAnalysis.riskScore,
+      });
+
+      return txHash;
+    },
+    { operation: "Portfolio Health Monitoring", runtime },
+  );
 };
 
 /**
- * Initialize workflow with cron trigger
+ * Cron trigger handler
+ */
+const onCronTrigger = async (
+  runtime: Runtime<Config>,
+  payload: CronPayload,
+): Promise<string> => {
+  runtime.log("⏰ Cron triggered - starting portfolio health check");
+  return runPortfolioHealthWorkflow(runtime);
+};
+
+/**
+ * Initialize workflow
  */
 const initWorkflow = (config: Config) => {
   const cronTrigger = new CronCapability();
