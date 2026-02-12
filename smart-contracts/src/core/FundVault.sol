@@ -233,14 +233,6 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
      *    - Executes deposits to new protocols
      *    - Updates totalAssets via updateTotalAssets()
      * 5. All steps are consensus-verified by Chainlink DON
-     *
-     * WHY THIS APPROACH FOR HACKATHON:
-     * ================================
-     * - Focuses demo on CRE's unique capabilities (multi-chain, AI, consensus)
-     * - Avoids reinventing DeFi interaction code (not the innovation)
-     * - Judges evaluate CRE integration, not Solidity DeFi patterns
-     * - Cleaner, more maintainable codebase
-     * - Can add full implementation post-hackathon if needed
      */
     function rebalance(
         string calldata strategy
