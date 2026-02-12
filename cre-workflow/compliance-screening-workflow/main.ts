@@ -1,390 +1,304 @@
 import {
-	bytesToHex,
-	ConsensusAggregationByFields,
-	type CronPayload,
-	handler,
-	CronCapability,
-	EVMClient,
-	HTTPClient,
-	type EVMLog,
-	encodeCallMsg,
-	getNetwork,
-	type HTTPSendRequester,
-	hexToBase64,
-	LAST_FINALIZED_BLOCK_NUMBER,
-	median,
-	Runner,
-	type Runtime,
-	TxStatus,
-} from '@chainlink/cre-sdk'
-import { type Address, decodeFunctionResult, encodeFunctionData, zeroAddress } from 'viem'
-import { z } from 'zod'
-import { BalanceReader, IERC20, MessageEmitter, ReserveManager } from '../contracts/abi'
+  bytesToHex,
+  type CronPayload,
+  handler,
+  CronCapability,
+  EVMClient,
+  type EVMLog,
+  LogTriggerCapability,
+  encodeCallMsg,
+  getNetwork,
+  hexToBase64,
+  LAST_FINALIZED_BLOCK_NUMBER,
+  Runner,
+  type Runtime,
+  TxStatus,
+} from "@chainlink/cre-sdk";
+import {
+  type Address,
+  decodeFunctionResult,
+  encodeFunctionData,
+  zeroAddress,
+  decodeEventLog,
+} from "viem";
+import { z } from "zod";
+import { ComplianceRegistryAbi, FundVaultAbi } from "../contracts/abi";
 
+// Configuration schema
 const configSchema = z.object({
-	schedule: z.string(),
-	url: z.string(),
-	evms: z.array(
-		z.object({
-			tokenAddress: z.string(),
-			porAddress: z.string(),
-			proxyAddress: z.string(),
-			balanceReaderAddress: z.string(),
-			messageEmitterAddress: z.string(),
-			chainSelectorName: z.string(),
-			gasLimit: z.string(),
-		}),
-	),
-})
+  schedule: z.string(),
+  complianceRegistryAddress: z.string(),
+  chainSelectorName: z.string(),
+  gasLimit: z.string(),
+  apiEndpoints: z.object({
+    chainalysis: z.string(),
+    ofacScreening: z.string(),
+  }),
+});
 
-type Config = z.infer<typeof configSchema>
+type Config = z.infer<typeof configSchema>;
 
-interface PORResponse {
-	accountName: string
-	totalTrust: number
-	totalToken: number
-	ripcord: boolean
-	updatedAt: string
-}
-
-interface ReserveInfo {
-	lastUpdated: Date
-	totalReserve: number
-}
+/**
+ * Compliance Screening Workflow
+ *
+ * This workflow monitors investor deposits and performs enhanced KYC/AML screening:
+ * 1. Listens for Deposited events from FundVault
+ * 2. Screens investor address against sanctions lists (OFAC, UN)
+ * 3. Checks Chainalysis for on-chain risk indicators
+ * 4. Updates ComplianceRegistry with screening results
+ *
+ * NOTE: In this demo, we'll use a simple cron-based approach
+ * In production, use LogTrigger to react to Deposited events
+ */
 
 // Utility function to safely stringify objects with bigints
 const safeJsonStringify = (obj: any): string =>
-	JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), 2)
+  JSON.stringify(
+    obj,
+    (_, value) => (typeof value === "bigint" ? value.toString() : value),
+    2,
+  );
 
-const fetchReserveInfo = (sendRequester: HTTPSendRequester, config: Config): ReserveInfo => {
-	const response = sendRequester.sendRequest({ method: 'GET', url: config.url }).result()
+/**
+ * Check if address is compliant in the registry
+ */
+const getComplianceStatus = (
+  runtime: Runtime<Config>,
+  investorAddress: Address,
+): { isKYCVerified: boolean; isSanctioned: boolean } => {
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: runtime.config.chainSelectorName,
+    isTestnet: true,
+  });
 
-	if (response.statusCode !== 200) {
-		throw new Error(`HTTP request failed with status: ${response.statusCode}`)
-	}
+  if (!network) {
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
+  }
 
-	const responseText = Buffer.from(response.body).toString('utf-8')
-	const porResp: PORResponse = JSON.parse(responseText)
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
-	if (porResp.ripcord) {
-		throw new Error('ripcord is true')
-	}
+  const callData = encodeFunctionData({
+    abi: ComplianceRegistryAbi,
+    functionName: "getComplianceStatus",
+    args: [investorAddress],
+  });
 
-	return {
-		lastUpdated: new Date(porResp.updatedAt),
-		totalReserve: porResp.totalToken,
-	}
-}
+  const contractCall = evmClient
+    .callContract(runtime, {
+      call: encodeCallMsg({
+        from: zeroAddress,
+        to: runtime.config.complianceRegistryAddress as Address,
+        data: callData,
+      }),
+      blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
+    })
+    .result();
 
-const fetchNativeTokenBalance = (
-	runtime: Runtime<Config>,
-	evmConfig: Config['evms'][0],
-	tokenHolderAddress: string,
-): bigint => {
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: evmConfig.chainSelectorName,
-		isTestnet: true,
-	})
+  const result = decodeFunctionResult({
+    abi: ComplianceRegistryAbi,
+    functionName: "getComplianceStatus",
+    data: bytesToHex(contractCall.data),
+  }) as readonly [boolean, boolean];
 
-	if (!network) {
-		throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-	}
+  return {
+    isKYCVerified: result[0],
+    isSanctioned: result[1],
+  };
+};
 
-	const evmClient = new EVMClient(network.chainSelector.selector)
+/**
+ * Perform off-chain compliance screening
+ *
+ * TODO: In production, integrate with:
+ * - Chainalysis KYT API
+ * - OFAC Sanctions Screening API
+ * - TRM Labs / Elliptic for transaction monitoring
+ * - AI-based risk scoring (Claude/GPT for pattern analysis)
+ */
+const performOffChainScreening = (
+  runtime: Runtime<Config>,
+  investorAddress: Address,
+): { shouldApprove: boolean; riskScore: number; reason: string } => {
+  runtime.log(`🔍 Screening address: ${investorAddress}`);
 
-	// Encode the contract call data for getNativeBalances
-	const callData = encodeFunctionData({
-		abi: BalanceReader,
-		functionName: 'getNativeBalances',
-		args: [[tokenHolderAddress as Address]],
-	})
+  // Simple heuristic for demo purposes
+  // In production, call actual compliance APIs here
+  const addressLower = investorAddress.toLowerCase();
 
-	const contractCall = evmClient
-		.callContract(runtime, {
-			call: encodeCallMsg({
-				from: zeroAddress,
-				to: evmConfig.balanceReaderAddress as Address,
-				data: callData,
-			}),
-			blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
-		})
-		.result()
+  // Check for known test addresses or patterns
+  const isTestAddress =
+    addressLower.includes("dead") || addressLower.includes("beef");
 
-	// Decode the result
-	const balances = decodeFunctionResult({
-		abi: BalanceReader,
-		functionName: 'getNativeBalances',
-		data: bytesToHex(contractCall.data),
-	})
+  if (isTestAddress) {
+    runtime.log(`⚠️  Test address detected - flagging as high risk`);
+    return {
+      shouldApprove: false,
+      riskScore: 85,
+      reason: "Test address pattern detected",
+    };
+  }
 
-	if (!balances || balances.length === 0) {
-		throw new Error('No balances returned from contract')
-	}
+  // Default: approve with low risk
+  runtime.log(`✅ Address appears clean`);
+  return {
+    shouldApprove: true,
+    riskScore: 10,
+    reason: "No red flags detected",
+  };
+};
 
-	return balances[0]
-}
-
-const getTotalSupply = (runtime: Runtime<Config>): bigint => {
-	const evms = runtime.config.evms
-	let totalSupply = 0n
-
-	for (const evmConfig of evms) {
-		const network = getNetwork({
-			chainFamily: 'evm',
-			chainSelectorName: evmConfig.chainSelectorName,
-			isTestnet: true,
-		})
-
-		if (!network) {
-			throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-		}
-
-		const evmClient = new EVMClient(network.chainSelector.selector)
-
-		// Encode the contract call data for totalSupply
-		const callData = encodeFunctionData({
-			abi: IERC20,
-			functionName: 'totalSupply',
-		})
-
-		const contractCall = evmClient
-			.callContract(runtime, {
-				call: encodeCallMsg({
-					from: zeroAddress,
-					to: evmConfig.tokenAddress as Address,
-					data: callData,
-				}),
-				blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
-			})
-			.result()
-
-		// Decode the result
-		const supply = decodeFunctionResult({
-			abi: IERC20,
-			functionName: 'totalSupply',
-			data: bytesToHex(contractCall.data),
-		})
-
-		totalSupply += supply
-	}
-
-	return totalSupply
-}
-
-const updateReserves = (
-	runtime: Runtime<Config>,
-	totalSupply: bigint,
-	totalReserveScaled: bigint,
+/**
+ * Update compliance status in ComplianceRegistry
+ */
+const updateComplianceStatus = (
+  runtime: Runtime<Config>,
+  investorAddress: Address,
+  isKYCVerified: boolean,
+  isSanctioned: boolean,
 ): string => {
-	const evmConfig = runtime.config.evms[0]
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: evmConfig.chainSelectorName,
-		isTestnet: true,
-	})
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: runtime.config.chainSelectorName,
+    isTestnet: true,
+  });
 
-	if (!network) {
-		throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-	}
+  if (!network) {
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
+  }
 
-	const evmClient = new EVMClient(network.chainSelector.selector)
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
-	runtime.log(
-		`Updating reserves totalSupply ${totalSupply.toString()} totalReserveScaled ${totalReserveScaled.toString()}`,
-	)
+  runtime.log(
+    `🔄 Updating compliance: ${investorAddress} | KYC: ${isKYCVerified} | Sanctioned: ${isSanctioned}`,
+  );
 
-	// Encode the contract call data for updateReserves
-	const callData = encodeFunctionData({
-		abi: ReserveManager,
-		functionName: 'updateReserves',
-		args: [
-			{
-				totalMinted: totalSupply,
-				totalReserve: totalReserveScaled,
-			},
-		],
-	})
+  // Encode the contract call for updateCompliance(address investor, bool kycVerified, bool sanctioned)
+  const callData = encodeFunctionData({
+    abi: ComplianceRegistryAbi,
+    functionName: "updateCompliance",
+    args: [investorAddress, isKYCVerified, isSanctioned],
+  });
 
-	// Step 1: Generate report using consensus capability
-	const reportResponse = runtime
-		.report({
-			encodedPayload: hexToBase64(callData),
-			encoderName: 'evm',
-			signingAlgo: 'ecdsa',
-			hashingAlgo: 'keccak256',
-		})
-		.result()
+  // Generate report using consensus capability
+  const reportResponse = runtime
+    .report({
+      encodedPayload: hexToBase64(callData),
+      encoderName: "evm",
+      signingAlgo: "ecdsa",
+      hashingAlgo: "keccak256",
+    })
+    .result();
 
-	const resp = evmClient
-		.writeReport(runtime, {
-			receiver: evmConfig.proxyAddress,
-			report: reportResponse,
-			gasConfig: {
-				gasLimit: evmConfig.gasLimit,
-			},
-		})
-		.result()
+  const resp = evmClient
+    .writeReport(runtime, {
+      receiver: runtime.config.complianceRegistryAddress,
+      report: reportResponse,
+      gasConfig: {
+        gasLimit: runtime.config.gasLimit,
+      },
+    })
+    .result();
 
-	const txStatus = resp.txStatus
+  const txStatus = resp.txStatus;
 
-	if (txStatus !== TxStatus.SUCCESS) {
-		throw new Error(`Failed to write report: ${resp.errorMessage || txStatus}`)
-	}
+  if (txStatus !== TxStatus.SUCCESS) {
+    throw new Error(
+      `Failed to update ComplianceRegistry: ${resp.errorMessage || txStatus}`,
+    );
+  }
 
-	const txHash = resp.txHash || new Uint8Array(32)
+  const txHash = resp.txHash || new Uint8Array(32);
 
-	runtime.log(`Write report transaction succeeded at txHash: ${bytesToHex(txHash)}`)
+  runtime.log(`✅ ComplianceRegistry updated! TxHash: ${bytesToHex(txHash)}`);
 
-	return txHash.toString()
-}
+  return bytesToHex(txHash);
+};
 
-const doPOR = (runtime: Runtime<Config>): string => {
-	runtime.log(`fetching por url ${runtime.config.url}`)
+/**
+ * Main workflow logic: Compliance Screening
+ */
+const performComplianceScreening = (runtime: Runtime<Config>): string => {
+  runtime.log("🚀 Starting Compliance Screening...");
 
-	const httpCapability = new HTTPClient()
-	const reserveInfo = httpCapability
-		.sendRequest(
-			runtime,
-			fetchReserveInfo,
-			ConsensusAggregationByFields<ReserveInfo>({
-				lastUpdated: median,
-				totalReserve: median,
-			}),
-		)(runtime.config)
-		.result()
+  // For demo purposes, screen a hardcoded test address
+  // In production with LogTrigger, extract investor from Deposited event
+  const testInvestor = "0x1234567890123456789012345678901234567890" as Address;
 
-	runtime.log(`ReserveInfo ${safeJsonStringify(reserveInfo)}`)
+  runtime.log(`👤 Screening investor: ${testInvestor}`);
 
-	const totalSupply = getTotalSupply(runtime)
-	runtime.log(`TotalSupply ${totalSupply.toString()}`)
+  // Step 1: Check current compliance status
+  const currentStatus = getComplianceStatus(runtime, testInvestor);
+  runtime.log(
+    `📊 Current status: KYC=${currentStatus.isKYCVerified}, Sanctioned=${currentStatus.isSanctioned}`,
+  );
 
-	const totalReserveScaled = BigInt(reserveInfo.totalReserve * 1e18)
-	runtime.log(`TotalReserveScaled ${totalReserveScaled.toString()}`)
+  // Step 2: Perform off-chain compliance screening
+  const screeningResult = performOffChainScreening(runtime, testInvestor);
+  runtime.log(
+    `📋 Screening result: ${screeningResult.reason} (risk: ${screeningResult.riskScore})`,
+  );
 
-	const nativeTokenBalance = fetchNativeTokenBalance(
-		runtime,
-		runtime.config.evms[0],
-		runtime.config.evms[0].tokenAddress,
-	)
-	runtime.log(`NativeTokenBalance ${nativeTokenBalance.toString()}`)
+  // Step 3: Determine new compliance status
+  const shouldUpdate =
+    currentStatus.isKYCVerified !== screeningResult.shouldApprove ||
+    currentStatus.isSanctioned !== !screeningResult.shouldApprove;
 
-	updateReserves(runtime, totalSupply, totalReserveScaled)
+  if (!shouldUpdate) {
+    runtime.log(`⏭️  No update needed - status unchanged`);
+    return "No update required";
+  }
 
-	return reserveInfo.totalReserve.toString()
-}
+  // Step 4: Update ComplianceRegistry
+  const txHash = updateComplianceStatus(
+    runtime,
+    testInvestor,
+    screeningResult.shouldApprove, // KYC verified
+    !screeningResult.shouldApprove, // Sanctioned (inverse of approval)
+  );
 
-const getLastMessage = (
-	runtime: Runtime<Config>,
-	evmConfig: Config['evms'][0],
-	emitter: string,
+  runtime.log("✅ Compliance Screening Complete!");
+
+  return txHash;
+};
+
+/**
+ * Handle cron trigger
+ */
+const onCronTrigger = (
+  runtime: Runtime<Config>,
+  payload: CronPayload,
 ): string => {
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: evmConfig.chainSelectorName,
-		isTestnet: true,
-	})
+  runtime.log(`⏰ Cron triggered - starting compliance screening`);
+  return performComplianceScreening(runtime);
+};
 
-	if (!network) {
-		throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-	}
-
-	const evmClient = new EVMClient(network.chainSelector.selector)
-
-	// Encode the contract call data for getLastMessage
-	const callData = encodeFunctionData({
-		abi: MessageEmitter,
-		functionName: 'getLastMessage',
-		args: [emitter as Address],
-	})
-
-	const contractCall = evmClient
-		.callContract(runtime, {
-			call: encodeCallMsg({
-				from: zeroAddress,
-				to: evmConfig.messageEmitterAddress as Address,
-				data: callData,
-			}),
-			blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
-		})
-		.result()
-
-	// Decode the result
-	const message = decodeFunctionResult({
-		abi: MessageEmitter,
-		functionName: 'getLastMessage',
-		data: bytesToHex(contractCall.data),
-	})
-
-	return message
-}
-
-const onCronTrigger = (runtime: Runtime<Config>, payload: CronPayload): string => {
-	if (!payload.scheduledExecutionTime) {
-		throw new Error('Scheduled execution time is required')
-	}
-
-	runtime.log('Running CronTrigger')
-
-	return doPOR(runtime)
-}
-
-const onLogTrigger = (runtime: Runtime<Config>, payload: EVMLog): string => {
-	runtime.log('Running LogTrigger')
-
-	const topics = payload.topics
-
-	if (topics.length < 3) {
-		runtime.log('Log payload does not contain enough topics')
-		throw new Error(`log payload does not contain enough topics ${topics.length}`)
-	}
-
-	// topics[1] is a 32-byte topic, but the address is the last 20 bytes
-	const emitter = bytesToHex(topics[1].slice(12))
-	runtime.log(`Emitter ${emitter}`)
-
-	const message = getLastMessage(runtime, runtime.config.evms[0], emitter)
-
-	runtime.log(`Message retrieved from the contract ${message}`)
-
-	return message
-}
-
+/**
+ * Initialize workflow with cron trigger
+ */
 const initWorkflow = (config: Config) => {
-	const cronTrigger = new CronCapability()
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: config.evms[0].chainSelectorName,
-		isTestnet: true,
-	})
+  const cronTrigger = new CronCapability();
 
-	if (!network) {
-		throw new Error(
-			`Network not found for chain selector name: ${config.evms[0].chainSelectorName}`,
-		)
-	}
+  return [
+    handler(
+      cronTrigger.trigger({
+        schedule: config.schedule,
+      }),
+      onCronTrigger,
+    ),
+  ];
+};
 
-	const evmClient = new EVMClient(network.chainSelector.selector)
-
-	return [
-		handler(
-			cronTrigger.trigger({
-				schedule: config.schedule,
-			}),
-			onCronTrigger,
-		),
-		handler(
-			evmClient.logTrigger({
-				addresses: [config.evms[0].messageEmitterAddress],
-			}),
-			onLogTrigger,
-		),
-	]
-}
-
+/**
+ * Main entry point
+ */
 export async function main() {
-	const runner = await Runner.newRunner<Config>({
-		configSchema,
-	})
-	await runner.run(initWorkflow)
+  const runner = await Runner.newRunner<Config>({
+    configSchema,
+  });
+  await runner.run(initWorkflow);
 }

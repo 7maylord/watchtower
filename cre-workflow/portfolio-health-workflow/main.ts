@@ -1,390 +1,331 @@
 import {
-	bytesToHex,
-	ConsensusAggregationByFields,
-	type CronPayload,
-	handler,
-	CronCapability,
-	EVMClient,
-	HTTPClient,
-	type EVMLog,
-	encodeCallMsg,
-	getNetwork,
-	type HTTPSendRequester,
-	hexToBase64,
-	LAST_FINALIZED_BLOCK_NUMBER,
-	median,
-	Runner,
-	type Runtime,
-	TxStatus,
-} from '@chainlink/cre-sdk'
-import { type Address, decodeFunctionResult, encodeFunctionData, zeroAddress } from 'viem'
-import { z } from 'zod'
-import { BalanceReader, IERC20, MessageEmitter, ReserveManager } from '../contracts/abi'
+  bytesToHex,
+  type CronPayload,
+  handler,
+  CronCapability,
+  EVMClient,
+  encodeCallMsg,
+  getNetwork,
+  hexToBase64,
+  LAST_FINALIZED_BLOCK_NUMBER,
+  Runner,
+  type Runtime,
+  TxStatus,
+} from "@chainlink/cre-sdk";
+import {
+  type Address,
+  decodeFunctionResult,
+  encodeFunctionData,
+  zeroAddress,
+} from "viem";
+import { z } from "zod";
+import { FundVaultAbi, RiskOracleAbi } from "../contracts/abi";
 
+// Configuration schema
 const configSchema = z.object({
-	schedule: z.string(),
-	url: z.string(),
-	evms: z.array(
-		z.object({
-			tokenAddress: z.string(),
-			porAddress: z.string(),
-			proxyAddress: z.string(),
-			balanceReaderAddress: z.string(),
-			messageEmitterAddress: z.string(),
-			chainSelectorName: z.string(),
-			gasLimit: z.string(),
-		}),
-	),
-})
+  schedule: z.string(),
+  fundVaultAddress: z.string(),
+  riskOracleAddress: z.string(),
+  chainSelectorName: z.string(),
+  gasLimit: z.string(),
+  riskThresholds: z.object({
+    low: z.number(),
+    medium: z.number(),
+    high: z.number(),
+    critical: z.number(),
+  }),
+});
 
-type Config = z.infer<typeof configSchema>
-
-interface PORResponse {
-	accountName: string
-	totalTrust: number
-	totalToken: number
-	ripcord: boolean
-	updatedAt: string
-}
-
-interface ReserveInfo {
-	lastUpdated: Date
-	totalReserve: number
-}
+type Config = z.infer<typeof configSchema>;
 
 // Utility function to safely stringify objects with bigints
 const safeJsonStringify = (obj: any): string =>
-	JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), 2)
+  JSON.stringify(
+    obj,
+    (_, value) => (typeof value === "bigint" ? value.toString() : value),
+    2,
+  );
 
-const fetchReserveInfo = (sendRequester: HTTPSendRequester, config: Config): ReserveInfo => {
-	const response = sendRequester.sendRequest({ method: 'GET', url: config.url }).result()
+/**
+ * Read total assets from FundVault contract
+ */
+const getTotalAssets = (runtime: Runtime<Config>): bigint => {
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: runtime.config.chainSelectorName,
+    isTestnet: true,
+  });
 
-	if (response.statusCode !== 200) {
-		throw new Error(`HTTP request failed with status: ${response.statusCode}`)
-	}
+  if (!network) {
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
+  }
 
-	const responseText = Buffer.from(response.body).toString('utf-8')
-	const porResp: PORResponse = JSON.parse(responseText)
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
-	if (porResp.ripcord) {
-		throw new Error('ripcord is true')
-	}
+  // Encode the contract call for totalAssets()
+  const callData = encodeFunctionData({
+    abi: FundVaultAbi,
+    functionName: "totalAssets",
+  });
 
-	return {
-		lastUpdated: new Date(porResp.updatedAt),
-		totalReserve: porResp.totalToken,
-	}
-}
+  runtime.log("📊 Fetching total assets from FundVault...");
 
-const fetchNativeTokenBalance = (
-	runtime: Runtime<Config>,
-	evmConfig: Config['evms'][0],
-	tokenHolderAddress: string,
-): bigint => {
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: evmConfig.chainSelectorName,
-		isTestnet: true,
-	})
+  const contractCall = evmClient
+    .callContract(runtime, {
+      call: encodeCallMsg({
+        from: zeroAddress,
+        to: runtime.config.fundVaultAddress as Address,
+        data: callData,
+      }),
+      blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
+    })
+    .result();
 
-	if (!network) {
-		throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-	}
+  // Decode the result
+  const totalAssets = decodeFunctionResult({
+    abi: FundVaultAbi,
+    functionName: "totalAssets",
+    data: bytesToHex(contractCall.data),
+  });
 
-	const evmClient = new EVMClient(network.chainSelector.selector)
+  return totalAssets;
+};
 
-	// Encode the contract call data for getNativeBalances
-	const callData = encodeFunctionData({
-		abi: BalanceReader,
-		functionName: 'getNativeBalances',
-		args: [[tokenHolderAddress as Address]],
-	})
+/**
+ * Read current risk score from RiskOracle
+ */
+const getCurrentRiskScore = (runtime: Runtime<Config>): bigint => {
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: runtime.config.chainSelectorName,
+    isTestnet: true,
+  });
 
-	const contractCall = evmClient
-		.callContract(runtime, {
-			call: encodeCallMsg({
-				from: zeroAddress,
-				to: evmConfig.balanceReaderAddress as Address,
-				data: callData,
-			}),
-			blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
-		})
-		.result()
+  if (!network) {
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
+  }
 
-	// Decode the result
-	const balances = decodeFunctionResult({
-		abi: BalanceReader,
-		functionName: 'getNativeBalances',
-		data: bytesToHex(contractCall.data),
-	})
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
-	if (!balances || balances.length === 0) {
-		throw new Error('No balances returned from contract')
-	}
+  const callData = encodeFunctionData({
+    abi: RiskOracleAbi,
+    functionName: "getCurrentRiskScore",
+  });
 
-	return balances[0]
-}
+  const contractCall = evmClient
+    .callContract(runtime, {
+      call: encodeCallMsg({
+        from: zeroAddress,
+        to: runtime.config.riskOracleAddress as Address,
+        data: callData,
+      }),
+      blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
+    })
+    .result();
 
-const getTotalSupply = (runtime: Runtime<Config>): bigint => {
-	const evms = runtime.config.evms
-	let totalSupply = 0n
+  const result = decodeFunctionResult({
+    abi: RiskOracleAbi,
+    functionName: "getCurrentRiskScore",
+    data: bytesToHex(contractCall.data),
+  }) as readonly [bigint, bigint, string];
 
-	for (const evmConfig of evms) {
-		const network = getNetwork({
-			chainFamily: 'evm',
-			chainSelectorName: evmConfig.chainSelectorName,
-			isTestnet: true,
-		})
+  return result[0]; // Return only the score (uint256 = bigint)
+};
 
-		if (!network) {
-			throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-		}
+/**
+ * Calculate risk score based on portfolio metrics
+ *
+ * For now, thisimplementation uses a simple heuristic:
+ * - Low risk (0-30): Small portfolio size (<  $10k USDC)
+ * - Medium risk (31-50): Medium portfolio ($10k-$100k)
+ * - High risk (51-70): Large portfolio ($100k-$1M)
+ * - Critical risk (71-100): Very large (>$1M) or other risk factors
+ *
+ * TODO: In production, this should integrate:
+ * - DeFi protocol health APIs (Aave, Compound)
+ * - AI model for risk analysis (Claude/GPT)
+ * - Market volatility indicators
+ * - Counterparty risk metrics
+ */
+const calculateRiskScore = (
+  runtime: Runtime<Config>,
+  totalAssets: bigint,
+): number => {
+  // Convert from 6 decimals (USDC) to human-readable
+  const assetsInUSDC = Number(totalAssets) / 1e6;
 
-		const evmClient = new EVMClient(network.chainSelector.selector)
+  runtime.log(`💰 Portfolio size: $${assetsInUSDC.toLocaleString()} USDC`);
 
-		// Encode the contract call data for totalSupply
-		const callData = encodeFunctionData({
-			abi: IERC20,
-			functionName: 'totalSupply',
-		})
+  // Simple risk calculation based on portfolio size
+  let riskScore: number;
 
-		const contractCall = evmClient
-			.callContract(runtime, {
-				call: encodeCallMsg({
-					from: zeroAddress,
-					to: evmConfig.tokenAddress as Address,
-					data: callData,
-				}),
-				blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
-			})
-			.result()
+  if (assetsInUSDC < 10000) {
+    // Small portfolio: low risk
+    riskScore = 20;
+  } else if (assetsInUSDC < 100000) {
+    // Medium portfolio: moderate risk
+    riskScore = 40;
+  } else if (assetsInUSDC < 1000000) {
+    // Large portfolio: elevated risk
+    riskScore = 60;
+  } else {
+    // Very large portfolio: high risk
+    riskScore = 75;
+  }
 
-		// Decode the result
-		const supply = decodeFunctionResult({
-			abi: IERC20,
-			functionName: 'totalSupply',
-			data: bytesToHex(contractCall.data),
-		})
+  // TODO: Add additional risk factors here:
+  // - Protocol health scores
+  // - Market volatility
+  // - Concentration risk
+  // - AI-based predictions
 
-		totalSupply += supply
-	}
+  runtime.log(`📈 Calculated risk score: ${riskScore}/100`);
 
-	return totalSupply
-}
+  return riskScore;
+};
 
-const updateReserves = (
-	runtime: Runtime<Config>,
-	totalSupply: bigint,
-	totalReserveScaled: bigint,
+/**
+ * Update RiskOracle with new risk score
+ */
+const updateRiskOracle = (
+  runtime: Runtime<Config>,
+  riskScore: number,
+  ipfsHash: string,
 ): string => {
-	const evmConfig = runtime.config.evms[0]
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: evmConfig.chainSelectorName,
-		isTestnet: true,
-	})
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: runtime.config.chainSelectorName,
+    isTestnet: true,
+  });
 
-	if (!network) {
-		throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-	}
+  if (!network) {
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
+  }
 
-	const evmClient = new EVMClient(network.chainSelector.selector)
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
-	runtime.log(
-		`Updating reserves totalSupply ${totalSupply.toString()} totalReserveScaled ${totalReserveScaled.toString()}`,
-	)
+  runtime.log(
+    `🔄 Updating RiskOracle with score: ${riskScore}, hash: ${ipfsHash}`,
+  );
 
-	// Encode the contract call data for updateReserves
-	const callData = encodeFunctionData({
-		abi: ReserveManager,
-		functionName: 'updateReserves',
-		args: [
-			{
-				totalMinted: totalSupply,
-				totalReserve: totalReserveScaled,
-			},
-		],
-	})
+  // Encode the contract call for updateRiskScore(uint256 newScore, string memory reportHash)
+  const callData = encodeFunctionData({
+    abi: RiskOracleAbi,
+    functionName: "updateRiskScore",
+    args: [BigInt(riskScore), ipfsHash],
+  });
 
-	// Step 1: Generate report using consensus capability
-	const reportResponse = runtime
-		.report({
-			encodedPayload: hexToBase64(callData),
-			encoderName: 'evm',
-			signingAlgo: 'ecdsa',
-			hashingAlgo: 'keccak256',
-		})
-		.result()
+  // Generate report using consensus capability
+  const reportResponse = runtime
+    .report({
+      encodedPayload: hexToBase64(callData),
+      encoderName: "evm",
+      signingAlgo: "ecdsa",
+      hashingAlgo: "keccak256",
+    })
+    .result();
 
-	const resp = evmClient
-		.writeReport(runtime, {
-			receiver: evmConfig.proxyAddress,
-			report: reportResponse,
-			gasConfig: {
-				gasLimit: evmConfig.gasLimit,
-			},
-		})
-		.result()
+  const resp = evmClient
+    .writeReport(runtime, {
+      receiver: runtime.config.riskOracleAddress,
+      report: reportResponse,
+      gasConfig: {
+        gasLimit: runtime.config.gasLimit,
+      },
+    })
+    .result();
 
-	const txStatus = resp.txStatus
+  const txStatus = resp.txStatus;
 
-	if (txStatus !== TxStatus.SUCCESS) {
-		throw new Error(`Failed to write report: ${resp.errorMessage || txStatus}`)
-	}
+  if (txStatus !== TxStatus.SUCCESS) {
+    throw new Error(
+      `Failed to update RiskOracle: ${resp.errorMessage || txStatus}`,
+    );
+  }
 
-	const txHash = resp.txHash || new Uint8Array(32)
+  const txHash = resp.txHash || new Uint8Array(32);
 
-	runtime.log(`Write report transaction succeeded at txHash: ${bytesToHex(txHash)}`)
+  runtime.log(`✅ RiskOracle updated! TxHash: ${bytesToHex(txHash)}`);
 
-	return txHash.toString()
-}
+  return bytesToHex(txHash);
+};
 
-const doPOR = (runtime: Runtime<Config>): string => {
-	runtime.log(`fetching por url ${runtime.config.url}`)
+/**
+ * Main workflow logic: Portfolio Health Monitoring
+ */
+const monitorPortfolioHealth = (runtime: Runtime<Config>): string => {
+  runtime.log("🚀 Starting Portfolio Health Monitoring...");
 
-	const httpCapability = new HTTPClient()
-	const reserveInfo = httpCapability
-		.sendRequest(
-			runtime,
-			fetchReserveInfo,
-			ConsensusAggregationByFields<ReserveInfo>({
-				lastUpdated: median,
-				totalReserve: median,
-			}),
-		)(runtime.config)
-		.result()
+  // Step 1: Read total assets from FundVault
+  const totalAssets = getTotalAssets(runtime);
 
-	runtime.log(`ReserveInfo ${safeJsonStringify(reserveInfo)}`)
+  // Step 2: Get current risk score
+  const currentScore = getCurrentRiskScore(runtime);
+  runtime.log(`📊 Current risk score: ${currentScore}`);
 
-	const totalSupply = getTotalSupply(runtime)
-	runtime.log(`TotalSupply ${totalSupply.toString()}`)
+  // Step 3: Calculate new risk score based on portfolio metrics
+  const newRiskScore = calculateRiskScore(runtime, totalAssets);
 
-	const totalReserveScaled = BigInt(reserveInfo.totalReserve * 1e18)
-	runtime.log(`TotalReserveScaled ${totalReserveScaled.toString()}`)
+  // Step 4: Check if update is needed (only update if score changed by >= 5 points)
+  const scoreDiff = Math.abs(Number(currentScore) - newRiskScore);
 
-	const nativeTokenBalance = fetchNativeTokenBalance(
-		runtime,
-		runtime.config.evms[0],
-		runtime.config.evms[0].tokenAddress,
-	)
-	runtime.log(`NativeTokenBalance ${nativeTokenBalance.toString()}`)
+  if (scoreDiff < 5) {
+    runtime.log(`⏭️  Score change too small (${scoreDiff}), skipping update`);
+    return `No update needed. Current: ${currentScore}, New: ${newRiskScore}`;
+  }
 
-	updateReserves(runtime, totalSupply, totalReserveScaled)
+  // Step 5: Generate IPFS hash for detailed report
+  // TODO: In production, upload detailed risk analysis to IPFS
+  const ipfsHash = `QmRiskReport${newRiskScore}`; // Placeholder hash
 
-	return reserveInfo.totalReserve.toString()
-}
+  // Step 6: Update RiskOracle
+  const txHash = updateRiskOracle(runtime, newRiskScore, ipfsHash);
 
-const getLastMessage = (
-	runtime: Runtime<Config>,
-	evmConfig: Config['evms'][0],
-	emitter: string,
+  runtime.log("✅ Portfolio Health Monitoring Complete!");
+
+  return txHash;
+};
+
+/**
+ * Handle cron trigger
+ */
+const onCronTrigger = (
+  runtime: Runtime<Config>,
+  payload: CronPayload,
 ): string => {
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: evmConfig.chainSelectorName,
-		isTestnet: true,
-	})
+  runtime.log(`⏰ Cron triggered - starting portfolio health check`);
 
-	if (!network) {
-		throw new Error(`Network not found for chain selector name: ${evmConfig.chainSelectorName}`)
-	}
+  return monitorPortfolioHealth(runtime);
+};
 
-	const evmClient = new EVMClient(network.chainSelector.selector)
-
-	// Encode the contract call data for getLastMessage
-	const callData = encodeFunctionData({
-		abi: MessageEmitter,
-		functionName: 'getLastMessage',
-		args: [emitter as Address],
-	})
-
-	const contractCall = evmClient
-		.callContract(runtime, {
-			call: encodeCallMsg({
-				from: zeroAddress,
-				to: evmConfig.messageEmitterAddress as Address,
-				data: callData,
-			}),
-			blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
-		})
-		.result()
-
-	// Decode the result
-	const message = decodeFunctionResult({
-		abi: MessageEmitter,
-		functionName: 'getLastMessage',
-		data: bytesToHex(contractCall.data),
-	})
-
-	return message
-}
-
-const onCronTrigger = (runtime: Runtime<Config>, payload: CronPayload): string => {
-	if (!payload.scheduledExecutionTime) {
-		throw new Error('Scheduled execution time is required')
-	}
-
-	runtime.log('Running CronTrigger')
-
-	return doPOR(runtime)
-}
-
-const onLogTrigger = (runtime: Runtime<Config>, payload: EVMLog): string => {
-	runtime.log('Running LogTrigger')
-
-	const topics = payload.topics
-
-	if (topics.length < 3) {
-		runtime.log('Log payload does not contain enough topics')
-		throw new Error(`log payload does not contain enough topics ${topics.length}`)
-	}
-
-	// topics[1] is a 32-byte topic, but the address is the last 20 bytes
-	const emitter = bytesToHex(topics[1].slice(12))
-	runtime.log(`Emitter ${emitter}`)
-
-	const message = getLastMessage(runtime, runtime.config.evms[0], emitter)
-
-	runtime.log(`Message retrieved from the contract ${message}`)
-
-	return message
-}
-
+/**
+ * Initialize workflow with cron trigger
+ */
 const initWorkflow = (config: Config) => {
-	const cronTrigger = new CronCapability()
-	const network = getNetwork({
-		chainFamily: 'evm',
-		chainSelectorName: config.evms[0].chainSelectorName,
-		isTestnet: true,
-	})
+  const cronTrigger = new CronCapability();
 
-	if (!network) {
-		throw new Error(
-			`Network not found for chain selector name: ${config.evms[0].chainSelectorName}`,
-		)
-	}
+  return [
+    handler(
+      cronTrigger.trigger({
+        schedule: config.schedule,
+      }),
+      onCronTrigger,
+    ),
+  ];
+};
 
-	const evmClient = new EVMClient(network.chainSelector.selector)
-
-	return [
-		handler(
-			cronTrigger.trigger({
-				schedule: config.schedule,
-			}),
-			onCronTrigger,
-		),
-		handler(
-			evmClient.logTrigger({
-				addresses: [config.evms[0].messageEmitterAddress],
-			}),
-			onLogTrigger,
-		),
-	]
-}
-
+/**
+ * Main entry point
+ */
 export async function main() {
-	const runner = await Runner.newRunner<Config>({
-		configSchema,
-	})
-	await runner.run(initWorkflow)
+  const runner = await Runner.newRunner<Config>({
+    configSchema,
+  });
+  await runner.run(initWorkflow);
 }

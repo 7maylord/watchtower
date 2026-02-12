@@ -1,7 +1,7 @@
 staging-settings:
   user-workflow:
-    workflow-name: "portfolio-health-monitor"
-    workflow-description: "Monitors Watchtower FundVault portfolio health and updates RiskOracle with AI-generated risk scores"
+    workflow-name: "rebalancing-advisor"
+    workflow-description: "Generates AI-powered portfolio rebalancing recommendations (advisory only)"
     workflow-owner: "olumideadenigba@gmail.com"
     workflow-version: "1.0.0"
   workflow-artifacts:
@@ -11,8 +11,8 @@ staging-settings:
 
 production-settings:
   user-workflow:
-    workflow-name: "portfolio-health-monitor"
-    workflow-description: "Monitors Watchtower FundVault portfolio health and updates RiskOracle with AI-generated risk scores"
+    workflow-name: "rebalancing-advisor"
+    workflow-description: "Generates AI-powered portfolio rebalancing recommendations (advisory only)"
     workflow-owner: "olumideadenigba@gmail.com"
     workflow-version: "1.0.0"
   workflow-artifacts:

@@ -1,13 +1,15 @@
 {
-  "schedule": "*/15 * * * *",
+  "schedule": "0 0 * * *",
   "fundVaultAddress": "0x5DDe75De392870BFD8f1BF1268a85765711DBF3e",
   "riskOracleAddress": "0x915dDC95D58a38A4065F77517ce70D4A2A0F1d88",
   "chainSelectorName": "ethereum-testnet-sepolia",
   "gasLimit": "5000000",
-  "riskThresholds": {
-    "low": 30,
-    "medium": 50,
-    "high": 70,
-    "critical": 85
+  "aiModel": {
+    "provider": "anthropic",
+    "enabled": false
+  },
+  "rebalancingThresholds": {
+    "minRiskScore": 50,
+    "minPortfolioSize": 10000
   }
 }
