@@ -11,12 +11,21 @@ import {
   Runner,
   type Runtime,
   TxStatus,
-} from '@chainlink/cre-sdk'
-import { type Address, decodeFunctionResult, encodeFunctionData, zeroAddress } from 'viem'
-import { z } from 'zod'
-import { ProofOfReserveOracleAbi, FundVaultAbi, IERC20 } from '../contracts/abi'
-import { PinataClient } from '../shared/pinata'
-import { StructuredLogger, withErrorHandling } from '../shared/utils'
+} from "@chainlink/cre-sdk";
+import {
+  type Address,
+  decodeFunctionResult,
+  encodeFunctionData,
+  zeroAddress,
+} from "viem";
+import { z } from "zod";
+import {
+  ProofOfReserveOracleAbi,
+  FundVaultAbi,
+  IERC20,
+} from "../contracts/abi";
+import { PinataClient } from "../shared/pinata";
+import { StructuredLogger, withErrorHandling } from "../shared/utils";
 
 // Configuration schema
 const configSchema = z.object({
@@ -26,17 +35,15 @@ const configSchema = z.object({
   mockUSDCAddress: z.string(),
   chainSelectorName: z.string(),
   gasLimit: z.string(),
-  secrets: z.object({
-    pinataApiKey: z.string(),
-    pinataApiSecret: z.string(),
-  }),
-})
+  pinataApiKey: z.string(),
+  pinataApiSecret: z.string(),
+});
 
-type Config = z.infer<typeof configSchema>
+type Config = z.infer<typeof configSchema>;
 
 /**
  * PRODUCTION Proof of Reserve Workflow
- * 
+ *
  * Verifies custodial holdings and uploads attestations to IPFS
  * NOTE: Custodian API integration optional - works with on-chain verification
  */
@@ -46,21 +53,23 @@ type Config = z.infer<typeof configSchema>
  */
 const getTotalAssets = (runtime: Runtime<Config>): bigint => {
   const network = getNetwork({
-    chainFamily: 'evm',
+    chainFamily: "evm",
     chainSelectorName: runtime.config.chainSelectorName,
     isTestnet: true,
-  })
+  });
 
   if (!network) {
-    throw new Error(`Network not found for chain selector: ${runtime.config.chainSelectorName}`)
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
   }
 
-  const evmClient = new EVMClient(network.chainSelector.selector)
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
   const callData = encodeFunctionData({
     abi: FundVaultAbi,
-    functionName: 'totalAssets',
-  })
+    functionName: "totalAssets",
+  });
 
   const contractCall = evmClient
     .callContract(runtime, {
@@ -71,38 +80,40 @@ const getTotalAssets = (runtime: Runtime<Config>): bigint => {
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
     })
-    .result()
+    .result();
 
   const totalAssets = decodeFunctionResult({
     abi: FundVaultAbi,
-    functionName: 'totalAssets',
+    functionName: "totalAssets",
     data: bytesToHex(contractCall.data),
-  })
+  });
 
-  return totalAssets as bigint
-}
+  return totalAssets as bigint;
+};
 
 /**
  * Get actual USDC balance in FundVault
  */
 const getActualBalance = (runtime: Runtime<Config>): bigint => {
   const network = getNetwork({
-    chainFamily: 'evm',
+    chainFamily: "evm",
     chainSelectorName: runtime.config.chainSelectorName,
     isTestnet: true,
-  })
+  });
 
   if (!network) {
-    throw new Error(`Network not found for chain selector: ${runtime.config.chainSelectorName}`)
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
   }
 
-  const evmClient = new EVMClient(network.chainSelector.selector)
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
   const callData = encodeFunctionData({
     abi: IERC20,
-    functionName: 'balanceOf',
+    functionName: "balanceOf",
     args: [runtime.config.fundVaultAddress as Address],
-  })
+  });
 
   const contractCall = evmClient
     .callContract(runtime, {
@@ -113,37 +124,39 @@ const getActualBalance = (runtime: Runtime<Config>): bigint => {
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
     })
-    .result()
+    .result();
 
   const balance = decodeFunctionResult({
     abi: IERC20,
-    functionName: 'balanceOf',
+    functionName: "balanceOf",
     data: bytesToHex(contractCall.data),
-  })
+  });
 
-  return balance as bigint
-}
+  return balance as bigint;
+};
 
 /**
  * Get current reserves from ProofOfReserveOracle
  */
 const getCurrentReserves = (runtime: Runtime<Config>): bigint => {
   const network = getNetwork({
-    chainFamily: 'evm',
+    chainFamily: "evm",
     chainSelectorName: runtime.config.chainSelectorName,
     isTestnet: true,
-  })
+  });
 
   if (!network) {
-    throw new Error(`Network not found for chain selector: ${runtime.config.chainSelectorName}`)
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
   }
 
-  const evmClient = new EVMClient(network.chainSelector.selector)
+  const evmClient = new EVMClient(network.chainSelector.selector);
 
   const callData = encodeFunctionData({
     abi: ProofOfReserveOracleAbi,
-    functionName: 'getCurrentReserves',
-  })
+    functionName: "getCurrentReserves",
+  });
 
   const contractCall = evmClient
     .callContract(runtime, {
@@ -154,18 +167,18 @@ const getCurrentReserves = (runtime: Runtime<Config>): bigint => {
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
     })
-    .result()
+    .result();
 
   const result = decodeFunctionResult({
     abi: ProofOfReserveOracleAbi,
-    functionName: 'getCurrentReserves',
+    functionName: "getCurrentReserves",
     data: bytesToHex(contractCall.data),
-  })
+  });
 
   // Extract onChainReserves from the struct
-  const reserves = result as any
-  return BigInt(reserves.onChainReserves || 0)
-}
+  const reserves = result as any;
+  return BigInt(reserves.onChainReserves || 0);
+};
 
 /**
  * Update ProofOfReserveOracle
@@ -173,40 +186,42 @@ const getCurrentReserves = (runtime: Runtime<Config>): bigint => {
 const updateReserves = (
   runtime: Runtime<Config>,
   totalReserves: bigint,
-  reportHash: string
+  reportHash: string,
 ): string => {
   const network = getNetwork({
-    chainFamily: 'evm',
+    chainFamily: "evm",
     chainSelectorName: runtime.config.chainSelectorName,
     isTestnet: true,
-  })
+  });
 
   if (!network) {
-    throw new Error(`Network not found for chain selector: ${runtime.config.chainSelectorName}`)
+    throw new Error(
+      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
+    );
   }
 
-  const evmClient = new EVMClient(network.chainSelector.selector)
-  const logger = new StructuredLogger(runtime)
+  const evmClient = new EVMClient(network.chainSelector.selector);
+  const logger = new StructuredLogger(runtime);
 
-  logger.info('Updating ProofOfReserveOracle', {
+  logger.info("Updating ProofOfReserveOracle", {
     totalReserves: `$${(Number(totalReserves) / 1e6).toLocaleString()}`,
-   reportHash,
-  })
+    reportHash,
+  });
 
   const callData = encodeFunctionData({
     abi: ProofOfReserveOracleAbi,
-    functionName: 'updateReserves',
+    functionName: "updateReserves",
     args: [totalReserves, reportHash],
-  })
+  });
 
   const reportResponse = runtime
     .report({
       encodedPayload: hexToBase64(callData),
-      encoderName: 'evm',
-      signingAlgo: 'ecdsa',
-      hashingAlgo: 'keccak256',
+      encoderName: "evm",
+      signingAlgo: "ecdsa",
+      hashingAlgo: "keccak256",
     })
-    .result()
+    .result();
 
   const resp = evmClient
     .writeReport(runtime, {
@@ -216,123 +231,138 @@ const updateReserves = (
         gasLimit: runtime.config.gasLimit,
       },
     })
-    .result()
+    .result();
 
   if (resp.txStatus !== TxStatus.SUCCESS) {
-    throw new Error(`Failed to update ProofOfReserveOracle: ${resp.errorMessage || resp.txStatus}`)
+    throw new Error(
+      `Failed to update ProofOfReserveOracle: ${resp.errorMessage || resp.txStatus}`,
+    );
   }
 
-  const txHash = bytesToHex(resp.txHash || new Uint8Array(32))
-  logger.success('ProofOfReserveOracle updated', { txHash })
+  const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
+  logger.success("ProofOfReserveOracle updated", { txHash });
 
-  return txHash
-}
+  return txHash;
+};
 
 /**
  * Main workflow logic
  */
-const runProofOfReserveWorkflow = async (runtime: Runtime<Config>): Promise<string> => {
-  const logger = new StructuredLogger(runtime)
+const runProofOfReserveWorkflow = async (
+  runtime: Runtime<Config>,
+): Promise<string> => {
+  const logger = new StructuredLogger(runtime);
 
-  logger.info('🚀 Starting Production Proof of Reserve Verification')
+  logger.info("🚀 Starting Production Proof of Reserve Verification");
 
   return withErrorHandling(
     async () => {
       // Step 1: Read total assets
-      const totalAssets = getTotalAssets(runtime)
-      const assetsInUSDC = Number(totalAssets) / 1e6
+      const totalAssets = getTotalAssets(runtime);
+      const assetsInUSDC = Number(totalAssets) / 1e6;
 
-      logger.info('Total assets', { totalAssets: `$${assetsInUSDC.toLocaleString()}` })
+      logger.info("Total assets", {
+        totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+      });
 
       // Step 2: Get actual USDC balance
-      const actualBalance = getActualBalance(runtime)
-      const balanceInUSDC = Number(actualBalance) / 1e6
+      const actualBalance = getActualBalance(runtime);
+      const balanceInUSDC = Number(actualBalance) / 1e6;
 
-      logger.info('Actual USDC balance', { balance: `$${balanceInUSDC.toLocaleString()}` })
+      logger.info("Actual USDC balance", {
+        balance: `$${balanceInUSDC.toLocaleString()}`,
+      });
 
       // Step 3: Calculate total reserves (on-chain only for now)
-      const totalReserves = actualBalance
-      const reservesInUSDC = Number(totalReserves) / 1e6
+      const totalReserves = actualBalance;
+      const reservesInUSDC = Number(totalReserves) / 1e6;
 
-      logger.info('Total reserves', { reserves: `$${reservesInUSDC.toLocaleString()}` })
+      logger.info("Total reserves", {
+        reserves: `$${reservesInUSDC.toLocaleString()}`,
+      });
 
       // Step 4: Calculate reserve ratio
-      let reserveRatio = 10000 // 100% in basis points
+      let reserveRatio = 10000; // 100% in basis points
       if (totalAssets > 0n) {
-        reserveRatio = Number((total Reserves * 10000n) / totalAssets)
+        reserveRatio = Number((totalReserves * 10000n) / totalAssets);
       }
 
-      logger.info('Reserve ratio', { ratio: `${(reserveRatio / 100).toFixed(2)}%` })
+      logger.info("Reserve ratio", {
+        ratio: `${(reserveRatio / 100).toFixed(2)}%`,
+      });
 
       // Step 5: Check if update needed
-      const currentReserves = getCurrentReserves(runtime)
+      const currentReserves = getCurrentReserves(runtime);
       const diff =
         totalReserves > currentReserves
           ? totalReserves - currentReserves
-          : currentReserves - totalReserves
+          : currentReserves - totalReserves;
 
       if (diff < 1000000n) {
         // Less than 1 USDC difference
-        logger.info('Reserve change too small, skipping update')
-        return 'No update needed'
+        logger.info("Reserve change too small, skipping update");
+        return "No update needed";
       }
 
       // Step 6: Upload PoR report to IPFS
       const pinata = new PinataClient(
         runtime,
-        runtime.config.secrets.pinataApiKey,
-        runtime.config.secrets.pinataApiSecret
-      )
+        runtime.config.pinataApiKey,
+        runtime.config.pinataApiSecret,
+      );
 
       const ipfsHash = await pinata.uploadReserveReport({
         timestamp: Date.now(),
         totalReserves: `$${reservesInUSDC.toLocaleString()} USDC`,
         onChainReserves: `$${balanceInUSDC.toLocaleString()} USDC`,
-        custodianReserves: '$0 USDC',
+        custodianReserves: "$0 USDC",
         reserveRatio: `${(reserveRatio / 100).toFixed(2)}%`,
-        attestations: [{ source: 'On-chain USDC balance', verified: true }],
-      })
+        attestations: [{ source: "On-chain USDC balance", verified: true }],
+      });
 
-      logger.success('PoR report uploaded to IPFS', { ipfsHash })
+      logger.success("PoR report uploaded to IPFS", { ipfsHash });
 
       // Step 7: Update ProofOfReserveOracle
-      const txHash = updateReserves(runtime, totalReserves, ipfsHash)
+      const txHash = updateReserves(runtime, totalReserves, ipfsHash);
 
-      logger.success('✅ Proof of Reserve Verification Complete', {
+      logger.success("✅ Proof of Reserve Verification Complete", {
         txHash,
         ipfsHash,
         reserveRatio: `${(reserveRatio / 100).toFixed(2)}%`,
-      })
+      });
 
-      return txHash
+      return txHash;
     },
-    { operation: 'Proof of Reserve Verification', runtime }
-  )
-}
+    { operation: "Proof of Reserve Verification", runtime },
+  );
+};
 
 /**
  * Cron trigger handler
  */
-const onCronTrigger = async (runtime: Runtime<Config>, payload: CronPayload): Promise<string> => {
-  runtime.log('⏰ Cron triggered - starting PoR verification')
-  return runProofOfReserveWorkflow(runtime)
-}
+const onCronTrigger = async (
+  runtime: Runtime<Config>,
+  payload: CronPayload,
+): Promise<string> => {
+  runtime.log("⏰ Cron triggered - starting PoR verification");
+  return runProofOfReserveWorkflow(runtime);
+};
 
 /**
  * Initialize workflow
  */
 const initWorkflow = (config: Config) => {
-  const cronTrigger = new CronCapability()
+  const cronTrigger = new CronCapability();
 
   return [
     handler(
       cronTrigger.trigger({
         schedule: config.schedule,
       }),
-      onCronTrigger
+      onCronTrigger,
     ),
-  ]
-}
+  ];
+};
 
 /**
  * Main entry point
@@ -340,6 +370,6 @@ const initWorkflow = (config: Config) => {
 export async function main() {
   const runner = await Runner.newRunner<Config>({
     configSchema,
-  })
-  await runner.run(initWorkflow)
+  });
+  await runner.run(initWorkflow);
 }

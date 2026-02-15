@@ -37,11 +37,9 @@ const configSchema = z.object({
     high: z.number(),
     updateThreshold: z.number(),
   }),
-  secrets: z.object({
-    geminiApiKey: z.string(),
-    pinataApiKey: z.string(),
-    pinataApiSecret: z.string(),
-  }),
+  geminiApiKey: z.string(),
+  pinataApiKey: z.string(),
+  pinataApiSecret: z.string(),
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -150,7 +148,7 @@ const calculateRiskScore = async (
   recommendations: string[];
 }> => {
   const logger = new StructuredLogger(runtime);
-  const gemini = new GeminiClient(runtime, runtime.config.secrets.geminiApiKey);
+  const gemini = new GeminiClient(runtime, runtime.config.geminiApiKey);
 
   const assetsInUSDC = Number(portfolioData.totalAssets) / 1e6;
 
@@ -311,8 +309,8 @@ const runPortfolioHealthWorkflow = async (
       // Step 4: Upload detailed report to IPFS
       const pinata = new PinataClient(
         runtime,
-        runtime.config.secrets.pinataApiKey,
-        runtime.config.secrets.pinataApiSecret,
+        runtime.config.pinataApiKey,
+        runtime.config.pinataApiSecret,
       );
 
       const ipfsHash = await pinata.uploadRiskReport({

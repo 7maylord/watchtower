@@ -5,8 +5,6 @@
   "mockUSDCAddress": "0x562c664b67a12767efc7a13D712C66C602240760",
   "chainSelectorName": "ethereum-testnet-sepolia",
   "gasLimit": "5000000",
-  "secrets": {
-    "pinataApiKey": "${PINATA_API_KEY}",
-    "pinataApiSecret": "${PINATA_API_SECRET}"
-  }
+  "pinataApiKey": "${PINATA_API_KEY}",
+  "pinataApiSecret": "${PINATA_API_SECRET}"
 }

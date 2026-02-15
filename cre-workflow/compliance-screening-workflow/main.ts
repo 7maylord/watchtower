@@ -30,13 +30,10 @@ const configSchema = z.object({
   complianceRegistryAddress: z.string(),
   chainSelectorName: z.string(),
   gasLimit: z.string(),
-  secrets: z.object({
-    chainalysisApiKey: z.string(),
-    pinataApiKey: z.string(),
-    pinataApiSecret: z.string(),
-  }),
+  chainalysisApiKey: z.string(),
+  pinataApiKey: z.string(),
+  pinataApiSecret: z.string(),
 });
-
 type Config = z.infer<typeof configSchema>;
 
 /**
@@ -115,12 +112,12 @@ const performComplianceScreening = async (
   // Initialize API clients
   const chainalysis = new ChainalysisClient(
     runtime,
-    runtime.config.secrets.chainalysisApiKey,
+    runtime.config.chainalysisApiKey,
   );
   const pinata = new PinataClient(
     runtime,
-    runtime.config.secrets.pinataApiKey,
-    runtime.config.secrets.pinataApiSecret,
+    runtime.config.pinataApiKey,
+    runtime.config.pinataApiSecret,
   );
 
   logger.info("Starting Chainalysis screening", { address: investorAddress });
