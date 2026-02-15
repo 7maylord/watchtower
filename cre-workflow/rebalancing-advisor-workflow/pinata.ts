@@ -38,9 +38,27 @@ export class PinataClient {
     });
 
     try {
+      // Build metadata safely - CRE WASM cannot handle null/undefined values
+      const pinataMetadata: Record<string, any> = {};
+      if (metadata?.name) {
+        pinataMetadata.name = metadata.name;
+      }
+      if (metadata?.keyvalues) {
+        const safeKeyvalues: Record<string, string> = {};
+        for (const [key, val] of Object.entries(metadata.keyvalues)) {
+          if (val != null) {
+            safeKeyvalues[key] = String(val);
+          }
+        }
+        pinataMetadata.keyvalues = safeKeyvalues;
+      }
+
+      // Strip any undefined/null values via JSON round-trip
+      const safeData = JSON.parse(JSON.stringify(data));
+
       const requestBody = {
-        pinataContent: data,
-        pinataMetadata: metadata || {},
+        pinataContent: safeData,
+        pinataMetadata,
       };
 
       const response = makeHttpPost<any>(

@@ -24,8 +24,8 @@ import {
   FundVaultAbi,
   IERC20,
 } from "../contracts/abi";
-import { PinataClient } from "../shared/pinata";
-import { StructuredLogger, withErrorHandling } from "../shared/utils";
+import { PinataClient } from "./pinata";
+import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
 const configSchema = z.object({
@@ -311,13 +311,12 @@ const runProofOfReserveWorkflow = async (
         runtime.config.pinataApiSecret,
       );
 
-      const ipfsHash = await pinata.uploadReserveReport({
+      const ipfsHash = pinata.uploadReserveReport(runtime, {
         timestamp: Date.now(),
         totalReserves: `$${reservesInUSDC.toLocaleString()} USDC`,
-        onChainReserves: `$${balanceInUSDC.toLocaleString()} USDC`,
-        custodianReserves: "$0 USDC",
+        actualBalance: `$${balanceInUSDC.toLocaleString()} USDC`,
         reserveRatio: `${(reserveRatio / 100).toFixed(2)}%`,
-        attestations: [{ source: "On-chain USDC balance", verified: true }],
+        attestation: "On-chain USDC balance verified",
       });
 
       logger.success("PoR report uploaded to IPFS", { ipfsHash });

@@ -60,3 +60,4 @@ venv/
 *.pem
 *.key
 secrets/
+config.staging.json

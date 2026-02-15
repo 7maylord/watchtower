@@ -20,9 +20,9 @@ import {
 } from "viem";
 import { z } from "zod";
 import { ComplianceRegistryAbi } from "../contracts/abi";
-import { ChainalysisClient } from "../shared/chainalysis";
-import { PinataClient } from "../shared/pinata";
-import { StructuredLogger, withErrorHandling } from "../shared/utils";
+import { ChainalysisClient } from "./chainalysis";
+import { PinataClient } from "./pinata";
+import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
 const configSchema = z.object({
@@ -123,7 +123,7 @@ const performComplianceScreening = async (
   logger.info("Starting Chainalysis screening", { address: investorAddress });
 
   // Screen address with Chainalysis
-  const screeningResult = await chainalysis.screenAddress(investorAddress);
+  const screeningResult = chainalysis.screenAddress(runtime, investorAddress);
 
   logger.info("Chainalysis screening complete", {
     address: investorAddress,
@@ -136,20 +136,21 @@ const performComplianceScreening = async (
     !screeningResult.isSanctioned && screeningResult.riskScore < 50;
 
   // Upload detailed report to IPFS
-  const ipfsHash = await pinata.uploadComplianceReport({
-    timestamp: Date.now(),
-    address: investorAddress,
-    kycVerified: shouldApprove,
-    sanctioned: screeningResult.isSanctioned,
-    riskScore: screeningResult.riskScore,
-    details: {
-      exposures: screeningResult.exposures,
-      confidence: screeningResult.confidence,
-      detailedReport: screeningResult.detailedReport,
-    },
-  });
-
-  logger.success("Compliance report uploaded to IPFS", { ipfsHash });
+  let ipfsHash = "N/A";
+  try {
+    ipfsHash = pinata.uploadComplianceReport(runtime, {
+      timestamp: Date.now(),
+      address: investorAddress,
+      status: shouldApprove ? "APPROVED" : "REJECTED",
+      riskScore: screeningResult.riskScore,
+      screeningDetails: `Sanctioned: ${screeningResult.isSanctioned}, Confidence: ${screeningResult.confidence}`,
+    });
+    logger.success("Compliance report uploaded to IPFS", { ipfsHash });
+  } catch (uploadError) {
+    logger.warn("Pinata upload failed, continuing without IPFS", {
+      error: (uploadError as Error).message,
+    });
+  }
 
   return {
     shouldApprove,

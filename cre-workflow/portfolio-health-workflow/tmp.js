@@ -5775,6 +5775,7 @@ var ListSchema = /* @__PURE__ */ messageDesc(file_values_v1_values, 3);
 var DecimalSchema = /* @__PURE__ */ messageDesc(file_values_v1_values, 4);
 var file_sdk_v1alpha_sdk = /* @__PURE__ */ fileDesc("ChVzZGsvdjFhbHBoYS9zZGsucHJvdG8SC3Nkay52MWFscGhhIrQBChVTaW1wbGVDb25zZW5zdXNJbnB1dHMSIQoFdmFsdWUYASABKAsyEC52YWx1ZXMudjEuVmFsdWVIABIPCgVlcnJvchgCIAEoCUgAEjUKC2Rlc2NyaXB0b3JzGAMgASgLMiAuc2RrLnYxYWxwaGEuQ29uc2Vuc3VzRGVzY3JpcHRvchIhCgdkZWZhdWx0GAQgASgLMhAudmFsdWVzLnYxLlZhbHVlQg0KC29ic2VydmF0aW9uIpABCglGaWVsZHNNYXASMgoGZmllbGRzGAEgAygLMiIuc2RrLnYxYWxwaGEuRmllbGRzTWFwLkZpZWxkc0VudHJ5Gk8KC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIvCgV2YWx1ZRgCIAEoCzIgLnNkay52MWFscGhhLkNvbnNlbnN1c0Rlc2NyaXB0b3I6AjgBIoYBChNDb25zZW5zdXNEZXNjcmlwdG9yEjMKC2FnZ3JlZ2F0aW9uGAEgASgOMhwuc2RrLnYxYWxwaGEuQWdncmVnYXRpb25UeXBlSAASLAoKZmllbGRzX21hcBgCIAEoCzIWLnNkay52MWFscGhhLkZpZWxkc01hcEgAQgwKCmRlc2NyaXB0b3IiagoNUmVwb3J0UmVxdWVzdBIXCg9lbmNvZGVkX3BheWxvYWQYASABKAwSFAoMZW5jb2Rlcl9uYW1lGAIgASgJEhQKDHNpZ25pbmdfYWxnbxgDIAEoCRIUCgxoYXNoaW5nX2FsZ28YBCABKAkilwEKDlJlcG9ydFJlc3BvbnNlEhUKDWNvbmZpZ19kaWdlc3QYASABKAwSEgoGc2VxX25yGAIgASgEQgIwABIWCg5yZXBvcnRfY29udGV4dBgDIAEoDBISCgpyYXdfcmVwb3J0GAQgASgMEi4KBHNpZ3MYBSADKAsyIC5zZGsudjFhbHBoYS5BdHRyaWJ1dGVkU2lnbmF0dXJlIjsKE0F0dHJpYnV0ZWRTaWduYXR1cmUSEQoJc2lnbmF0dXJlGAEgASgMEhEKCXNpZ25lcl9pZBgCIAEoDSJrChFDYXBhYmlsaXR5UmVxdWVzdBIKCgJpZBgBIAEoCRIlCgdwYXlsb2FkGAIgASgLMhQuZ29vZ2xlLnByb3RvYnVmLkFueRIOCgZtZXRob2QYAyABKAkSEwoLY2FsbGJhY2tfaWQYBCABKAUiWgoSQ2FwYWJpbGl0eVJlc3BvbnNlEicKB3BheWxvYWQYASABKAsyFC5nb29nbGUucHJvdG9idWYuQW55SAASDwoFZXJyb3IYAiABKAlIAEIKCghyZXNwb25zZSJYChNUcmlnZ2VyU3Vic2NyaXB0aW9uEgoKAmlkGAEgASgJEiUKB3BheWxvYWQYAiABKAsyFC5nb29nbGUucHJvdG9idWYuQW55Eg4KBm1ldGhvZBgDIAEoCSJVChpUcmlnZ2VyU3Vic2NyaXB0aW9uUmVxdWVzdBI3Cg1zdWJzY3JpcHRpb25zGAEgAygLMiAuc2RrLnYxYWxwaGEuVHJpZ2dlclN1YnNjcmlwdGlvbiJACgdUcmlnZ2VyEg4KAmlkGAEgASgEQgIwABIlCgdwYXlsb2FkGAIgASgLMhQuZ29vZ2xlLnByb3RvYnVmLkFueSInChhBd2FpdENhcGFiaWxpdGllc1JlcXVlc3QSCwoDaWRzGAEgAygFIrgBChlBd2FpdENhcGFiaWxpdGllc1Jlc3BvbnNlEkgKCXJlc3BvbnNlcxgBIAMoCzI1LnNkay52MWFscGhhLkF3YWl0Q2FwYWJpbGl0aWVzUmVzcG9uc2UuUmVzcG9uc2VzRW50cnkaUQoOUmVzcG9uc2VzRW50cnkSCwoDa2V5GAEgASgFEi4KBXZhbHVlGAIgASgLMh8uc2RrLnYxYWxwaGEuQ2FwYWJpbGl0eVJlc3BvbnNlOgI4ASKgAQoORXhlY3V0ZVJlcXVlc3QSDgoGY29uZmlnGAEgASgMEisKCXN1YnNjcmliZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEicKB3RyaWdnZXIYAyABKAsyFC5zZGsudjFhbHBoYS5UcmlnZ2VySAASHQoRbWF4X3Jlc3BvbnNlX3NpemUYBCABKARCAjAAQgkKB3JlcXVlc3QimQEKD0V4ZWN1dGlvblJlc3VsdBIhCgV2YWx1ZRgBIAEoCzIQLnZhbHVlcy52MS5WYWx1ZUgAEg8KBWVycm9yGAIgASgJSAASSAoVdHJpZ2dlcl9zdWJzY3JpcHRpb25zGAMgASgLMicuc2RrLnYxYWxwaGEuVHJpZ2dlclN1YnNjcmlwdGlvblJlcXVlc3RIAEIICgZyZXN1bHQiVgoRR2V0U2VjcmV0c1JlcXVlc3QSLAoIcmVxdWVzdHMYASADKAsyGi5zZGsudjFhbHBoYS5TZWNyZXRSZXF1ZXN0EhMKC2NhbGxiYWNrX2lkGAIgASgFIiIKE0F3YWl0U2VjcmV0c1JlcXVlc3QSCwoDaWRzGAEgAygFIqsBChRBd2FpdFNlY3JldHNSZXNwb25zZRJDCglyZXNwb25zZXMYASADKAsyMC5zZGsudjFhbHBoYS5Bd2FpdFNlY3JldHNSZXNwb25zZS5SZXNwb25zZXNFbnRyeRpOCg5SZXNwb25zZXNFbnRyeRILCgNrZXkYASABKAUSKwoFdmFsdWUYAiABKAsyHC5zZGsudjFhbHBoYS5TZWNyZXRSZXNwb25zZXM6AjgBIi4KDVNlY3JldFJlcXVlc3QSCgoCaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJIkUKBlNlY3JldBIKCgJpZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSDQoFb3duZXIYAyABKAkSDQoFdmFsdWUYBCABKAkiSgoLU2VjcmV0RXJyb3ISCgoCaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEg0KBW93bmVyGAMgASgJEg0KBWVycm9yGAQgASgJIm4KDlNlY3JldFJlc3BvbnNlEiUKBnNlY3JldBgBIAEoCzITLnNkay52MWFscGhhLlNlY3JldEgAEikKBWVycm9yGAIgASgLMhguc2RrLnYxYWxwaGEuU2VjcmV0RXJyb3JIAEIKCghyZXNwb25zZSJBCg9TZWNyZXRSZXNwb25zZXMSLgoJcmVzcG9uc2VzGAEgAygLMhsuc2RrLnYxYWxwaGEuU2VjcmV0UmVzcG9uc2UquAEKD0FnZ3JlZ2F0aW9uVHlwZRIgChxBR0dSRUdBVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXQUdHUkVHQVRJT05fVFlQRV9NRURJQU4QARIeChpBR0dSRUdBVElPTl9UWVBFX0lERU5USUNBTBACEiIKHkFHR1JFR0FUSU9OX1RZUEVfQ09NTU9OX1BSRUZJWBADEiIKHkFHR1JFR0FUSU9OX1RZUEVfQ09NTU9OX1NVRkZJWBAEKjkKBE1vZGUSFAoQTU9ERV9VTlNQRUNJRklFRBAAEgwKCE1PREVfRE9OEAESDQoJTU9ERV9OT0RFEAJCaAoPY29tLnNkay52MWFscGhhQghTZGtQcm90b1ABogIDU1hYqgILU2RrLlYxYWxwaGHKAgtTZGtcVjFhbHBoYeICF1Nka1xWMWFscGhhXEdQQk1ldGFkYXRh6gIMU2RrOjpWMWFscGhhYgZwcm90bzM", [file_google_protobuf_any, file_google_protobuf_empty, file_values_v1_values]);
 var SimpleConsensusInputsSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 0);
+var ConsensusDescriptorSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 2);
 var ReportRequestSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 3);
 var ReportResponseSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 4);
 var CapabilityRequestSchema = /* @__PURE__ */ messageDesc(file_sdk_v1alpha_sdk, 6);
@@ -6134,9 +6135,9 @@ class ClientLogTrigger {
     return rawOutput;
   }
 }
-var file_capabilities_networking_http_v1alpha_client = /* @__PURE__ */ fileDesc("CjFjYXBhYmlsaXRpZXMvbmV0d29ya2luZy9odHRwL3YxYWxwaGEvY2xpZW50LnByb3RvEiRjYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEiSgoNQ2FjaGVTZXR0aW5ncxINCgVzdG9yZRgBIAEoCBIqCgdtYXhfYWdlGAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uIqoCCgdSZXF1ZXN0EgsKA3VybBgBIAEoCRIOCgZtZXRob2QYAiABKAkSSwoHaGVhZGVycxgDIAMoCzI6LmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmh0dHAudjFhbHBoYS5SZXF1ZXN0LkhlYWRlcnNFbnRyeRIMCgRib2R5GAQgASgMEioKB3RpbWVvdXQYBSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SSwoOY2FjaGVfc2V0dGluZ3MYBiABKAsyMy5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEuQ2FjaGVTZXR0aW5ncxouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKrAQoIUmVzcG9uc2USEwoLc3RhdHVzX2NvZGUYASABKA0STAoHaGVhZGVycxgCIAMoCzI7LmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmh0dHAudjFhbHBoYS5SZXNwb25zZS5IZWFkZXJzRW50cnkSDAoEYm9keRgDIAEoDBouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ATKYAQoGQ2xpZW50EmwKC1NlbmRSZXF1ZXN0Ei0uY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuaHR0cC52MWFscGhhLlJlcXVlc3QaLi5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEuUmVzcG9uc2UaIIK1GBwIAhIYaHR0cC1hY3Rpb25zQDEuMC4wLWFscGhhQuoBCihjb20uY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuaHR0cC52MWFscGhhQgtDbGllbnRQcm90b1ABogIDQ05IqgIkQ2FwYWJpbGl0aWVzLk5ldHdvcmtpbmcuSHR0cC5WMWFscGhhygIkQ2FwYWJpbGl0aWVzXE5ldHdvcmtpbmdcSHR0cFxWMWFscGhh4gIwQ2FwYWJpbGl0aWVzXE5ldHdvcmtpbmdcSHR0cFxWMWFscGhhXEdQQk1ldGFkYXRh6gInQ2FwYWJpbGl0aWVzOjpOZXR3b3JraW5nOjpIdHRwOjpWMWFscGhhYgZwcm90bzM", [file_google_protobuf_duration, file_tools_generator_v1alpha_cre_metadata]);
-var RequestSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_http_v1alpha_client, 1);
-var ResponseSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_http_v1alpha_client, 2);
+var file_capabilities_networking_confidentialhttp_v1alpha_client = /* @__PURE__ */ fileDesc("Cj1jYXBhYmlsaXRpZXMvbmV0d29ya2luZy9jb25maWRlbnRpYWxodHRwL3YxYWxwaGEvY2xpZW50LnByb3RvEjBjYXBhYmlsaXRpZXMubmV0d29ya2luZy5jb25maWRlbnRpYWxodHRwLnYxYWxwaGEiUAoQU2VjcmV0SWRlbnRpZmllchILCgNrZXkYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEhIKBW93bmVyGAMgASgJSACIAQFCCAoGX293bmVyIh4KDEhlYWRlclZhbHVlcxIOCgZ2YWx1ZXMYASADKAkivwQKC0hUVFBSZXF1ZXN0EgsKA3VybBgBIAEoCRIOCgZtZXRob2QYAiABKAkSFQoLYm9keV9zdHJpbmcYAyABKAlIABIUCgpib2R5X2J5dGVzGAggASgMSAASZgoNbXVsdGlfaGVhZGVycxgEIAMoCzJPLmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmNvbmZpZGVudGlhbGh0dHAudjFhbHBoYS5IVFRQUmVxdWVzdC5NdWx0aUhlYWRlcnNFbnRyeRJ3ChZ0ZW1wbGF0ZV9wdWJsaWNfdmFsdWVzGAUgAygLMlcuY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuY29uZmlkZW50aWFsaHR0cC52MWFscGhhLkhUVFBSZXF1ZXN0LlRlbXBsYXRlUHVibGljVmFsdWVzRW50cnkSHwoXY3VzdG9tX3Jvb3RfY2FfY2VydF9wZW0YBiABKAwSKgoHdGltZW91dBgHIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhpzChFNdWx0aUhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSTQoFdmFsdWUYAiABKAsyPi5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5jb25maWRlbnRpYWxodHRwLnYxYWxwaGEuSGVhZGVyVmFsdWVzOgI4ARo7ChlUZW1wbGF0ZVB1YmxpY1ZhbHVlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFCBgoEYm9keSKPAgoMSFRUUFJlc3BvbnNlEhMKC3N0YXR1c19jb2RlGAEgASgNEgwKBGJvZHkYAiABKAwSZwoNbXVsdGlfaGVhZGVycxgDIAMoCzJQLmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmNvbmZpZGVudGlhbGh0dHAudjFhbHBoYS5IVFRQUmVzcG9uc2UuTXVsdGlIZWFkZXJzRW50cnkacwoRTXVsdGlIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEk0KBXZhbHVlGAIgASgLMj4uY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuY29uZmlkZW50aWFsaHR0cC52MWFscGhhLkhlYWRlclZhbHVlczoCOAEi4AEKF0NvbmZpZGVudGlhbEhUVFBSZXF1ZXN0El0KEXZhdWx0X2Rvbl9zZWNyZXRzGAEgAygLMkIuY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuY29uZmlkZW50aWFsaHR0cC52MWFscGhhLlNlY3JldElkZW50aWZpZXISTgoHcmVxdWVzdBgCIAEoCzI9LmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmNvbmZpZGVudGlhbGh0dHAudjFhbHBoYS5IVFRQUmVxdWVzdBIWCg5lbmNyeXB0X291dHB1dBgDIAEoCDLKAQoGQ2xpZW50EpgBCgtTZW5kUmVxdWVzdBJJLmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmNvbmZpZGVudGlhbGh0dHAudjFhbHBoYS5Db25maWRlbnRpYWxIVFRQUmVxdWVzdBo+LmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmNvbmZpZGVudGlhbGh0dHAudjFhbHBoYS5IVFRQUmVzcG9uc2UaJYK1GCEIAhIdY29uZmlkZW50aWFsLWh0dHBAMS4wLjAtYWxwaGFCpgIKNGNvbS5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5jb25maWRlbnRpYWxodHRwLnYxYWxwaGFCC0NsaWVudFByb3RvUAGiAgNDTkOqAjBDYXBhYmlsaXRpZXMuTmV0d29ya2luZy5Db25maWRlbnRpYWxodHRwLlYxYWxwaGHKAjBDYXBhYmlsaXRpZXNcTmV0d29ya2luZ1xDb25maWRlbnRpYWxodHRwXFYxYWxwaGHiAjxDYXBhYmlsaXRpZXNcTmV0d29ya2luZ1xDb25maWRlbnRpYWxodHRwXFYxYWxwaGFcR1BCTWV0YWRhdGHqAjNDYXBhYmlsaXRpZXM6Ok5ldHdvcmtpbmc6OkNvbmZpZGVudGlhbGh0dHA6OlYxYWxwaGFiBnByb3RvMw", [file_google_protobuf_duration, file_tools_generator_v1alpha_cre_metadata]);
+var HTTPResponseSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_confidentialhttp_v1alpha_client, 3);
+var ConfidentialHTTPRequestSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_confidentialhttp_v1alpha_client, 4);
 
 class SendRequester {
   runtime;
@@ -6151,6 +6152,64 @@ class SendRequester {
 }
 
 class ClientCapability2 {
+  static CAPABILITY_ID = "confidential-http@1.0.0-alpha";
+  static CAPABILITY_NAME = "confidential-http";
+  static CAPABILITY_VERSION = "1.0.0-alpha";
+  sendRequest(...args) {
+    if (typeof args[1] === "function") {
+      const [runtime2, fn, consensusAggregation, unwrapOptions] = args;
+      return this.sendRequestSugarHelper(runtime2, fn, consensusAggregation, unwrapOptions);
+    }
+    const [runtime, input] = args;
+    return this.sendRequestCallHelper(runtime, input);
+  }
+  sendRequestCallHelper(runtime, input) {
+    let payload;
+    if (input.$typeName) {
+      payload = input;
+    } else {
+      payload = fromJson(ConfidentialHTTPRequestSchema, input);
+    }
+    const capabilityId = ClientCapability2.CAPABILITY_ID;
+    const capabilityResponse = runtime.callCapability({
+      capabilityId,
+      method: "SendRequest",
+      payload,
+      inputSchema: ConfidentialHTTPRequestSchema,
+      outputSchema: HTTPResponseSchema
+    });
+    return {
+      result: () => {
+        const result = capabilityResponse.result();
+        return result;
+      }
+    };
+  }
+  sendRequestSugarHelper(runtime, fn, consensusAggregation, unwrapOptions) {
+    const wrappedFn = (runtime2, ...args) => {
+      const sendRequester = new SendRequester(runtime2, this);
+      return fn(sendRequester, ...args);
+    };
+    return runtime.runInNodeMode(wrappedFn, consensusAggregation, unwrapOptions);
+  }
+}
+var file_capabilities_networking_http_v1alpha_client = /* @__PURE__ */ fileDesc("CjFjYXBhYmlsaXRpZXMvbmV0d29ya2luZy9odHRwL3YxYWxwaGEvY2xpZW50LnByb3RvEiRjYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEiSgoNQ2FjaGVTZXR0aW5ncxINCgVzdG9yZRgBIAEoCBIqCgdtYXhfYWdlGAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uIqoCCgdSZXF1ZXN0EgsKA3VybBgBIAEoCRIOCgZtZXRob2QYAiABKAkSSwoHaGVhZGVycxgDIAMoCzI6LmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmh0dHAudjFhbHBoYS5SZXF1ZXN0LkhlYWRlcnNFbnRyeRIMCgRib2R5GAQgASgMEioKB3RpbWVvdXQYBSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SSwoOY2FjaGVfc2V0dGluZ3MYBiABKAsyMy5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEuQ2FjaGVTZXR0aW5ncxouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKrAQoIUmVzcG9uc2USEwoLc3RhdHVzX2NvZGUYASABKA0STAoHaGVhZGVycxgCIAMoCzI7LmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmh0dHAudjFhbHBoYS5SZXNwb25zZS5IZWFkZXJzRW50cnkSDAoEYm9keRgDIAEoDBouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ATKYAQoGQ2xpZW50EmwKC1NlbmRSZXF1ZXN0Ei0uY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuaHR0cC52MWFscGhhLlJlcXVlc3QaLi5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEuUmVzcG9uc2UaIIK1GBwIAhIYaHR0cC1hY3Rpb25zQDEuMC4wLWFscGhhQuoBCihjb20uY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuaHR0cC52MWFscGhhQgtDbGllbnRQcm90b1ABogIDQ05IqgIkQ2FwYWJpbGl0aWVzLk5ldHdvcmtpbmcuSHR0cC5WMWFscGhhygIkQ2FwYWJpbGl0aWVzXE5ldHdvcmtpbmdcSHR0cFxWMWFscGhh4gIwQ2FwYWJpbGl0aWVzXE5ldHdvcmtpbmdcSHR0cFxWMWFscGhhXEdQQk1ldGFkYXRh6gInQ2FwYWJpbGl0aWVzOjpOZXR3b3JraW5nOjpIdHRwOjpWMWFscGhhYgZwcm90bzM", [file_google_protobuf_duration, file_tools_generator_v1alpha_cre_metadata]);
+var RequestSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_http_v1alpha_client, 1);
+var ResponseSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_http_v1alpha_client, 2);
+
+class SendRequester2 {
+  runtime;
+  client;
+  constructor(runtime, client) {
+    this.runtime = runtime;
+    this.client = client;
+  }
+  sendRequest(input) {
+    return this.client.sendRequest(this.runtime, input);
+  }
+}
+
+class ClientCapability3 {
   static CAPABILITY_ID = "http-actions@1.0.0-alpha";
   static CAPABILITY_NAME = "http-actions";
   static CAPABILITY_VERSION = "1.0.0-alpha";
@@ -6169,7 +6228,7 @@ class ClientCapability2 {
     } else {
       payload = fromJson(RequestSchema, input);
     }
-    const capabilityId = ClientCapability2.CAPABILITY_ID;
+    const capabilityId = ClientCapability3.CAPABILITY_ID;
     const capabilityResponse = runtime.callCapability({
       capabilityId,
       method: "SendRequest",
@@ -6186,17 +6245,56 @@ class ClientCapability2 {
   }
   sendRequestSugarHelper(runtime, fn, consensusAggregation, unwrapOptions) {
     const wrappedFn = (runtime2, ...args) => {
-      const sendRequester = new SendRequester(runtime2, this);
+      const sendRequester = new SendRequester2(runtime2, this);
       return fn(sendRequester, ...args);
     };
     return runtime.runInNodeMode(wrappedFn, consensusAggregation, unwrapOptions);
   }
 }
+var file_capabilities_networking_http_v1alpha_trigger = /* @__PURE__ */ fileDesc("CjJjYXBhYmlsaXRpZXMvbmV0d29ya2luZy9odHRwL3YxYWxwaGEvdHJpZ2dlci5wcm90bxIkY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuaHR0cC52MWFscGhhIlYKBkNvbmZpZxJMCg9hdXRob3JpemVkX2tleXMYASADKAsyMy5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEuQXV0aG9yaXplZEtleSJaCgdQYXlsb2FkEg0KBWlucHV0GAEgASgMEkAKA2tleRgCIAEoCzIzLmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmh0dHAudjFhbHBoYS5BdXRob3JpemVkS2V5ImAKDUF1dGhvcml6ZWRLZXkSOwoEdHlwZRgBIAEoDjItLmNhcGFiaWxpdGllcy5uZXR3b3JraW5nLmh0dHAudjFhbHBoYS5LZXlUeXBlEhIKCnB1YmxpY19rZXkYAiABKAkqOwoHS2V5VHlwZRIYChRLRVlfVFlQRV9VTlNQRUNJRklFRBAAEhYKEktFWV9UWVBFX0VDRFNBX0VWTRABMpIBCgRIVFRQEmgKB1RyaWdnZXISLC5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGEuQ29uZmlnGi0uY2FwYWJpbGl0aWVzLm5ldHdvcmtpbmcuaHR0cC52MWFscGhhLlBheWxvYWQwARoggrUYHAgBEhhodHRwLXRyaWdnZXJAMS4wLjAtYWxwaGFC6wEKKGNvbS5jYXBhYmlsaXRpZXMubmV0d29ya2luZy5odHRwLnYxYWxwaGFCDFRyaWdnZXJQcm90b1ABogIDQ05IqgIkQ2FwYWJpbGl0aWVzLk5ldHdvcmtpbmcuSHR0cC5WMWFscGhhygIkQ2FwYWJpbGl0aWVzXE5ldHdvcmtpbmdcSHR0cFxWMWFscGhh4gIwQ2FwYWJpbGl0aWVzXE5ldHdvcmtpbmdcSHR0cFxWMWFscGhhXEdQQk1ldGFkYXRh6gInQ2FwYWJpbGl0aWVzOjpOZXR3b3JraW5nOjpIdHRwOjpWMWFscGhhYgZwcm90bzM", [file_tools_generator_v1alpha_cre_metadata]);
+var ConfigSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_http_v1alpha_trigger, 0);
+var PayloadSchema = /* @__PURE__ */ messageDesc(file_capabilities_networking_http_v1alpha_trigger, 1);
 var KeyType;
 (function(KeyType2) {
   KeyType2[KeyType2["UNSPECIFIED"] = 0] = "UNSPECIFIED";
   KeyType2[KeyType2["ECDSA_EVM"] = 1] = "ECDSA_EVM";
 })(KeyType || (KeyType = {}));
+
+class HTTPCapability {
+  static CAPABILITY_ID = "http-trigger@1.0.0-alpha";
+  static CAPABILITY_NAME = "http-trigger";
+  static CAPABILITY_VERSION = "1.0.0-alpha";
+  trigger(config) {
+    const capabilityId = HTTPCapability.CAPABILITY_ID;
+    return new HTTPTrigger(config, capabilityId, "Trigger");
+  }
+}
+
+class HTTPTrigger {
+  _capabilityId;
+  _method;
+  config;
+  constructor(config, _capabilityId, _method) {
+    this._capabilityId = _capabilityId;
+    this._method = _method;
+    this.config = config.$typeName ? config : fromJson(ConfigSchema, config);
+  }
+  capabilityId() {
+    return this._capabilityId;
+  }
+  method() {
+    return this._method;
+  }
+  outputSchema() {
+    return PayloadSchema;
+  }
+  configAsAny() {
+    return anyPack(ConfigSchema, this.config);
+  }
+  adapt(rawOutput) {
+    return rawOutput;
+  }
+}
 var file_capabilities_scheduler_cron_v1_trigger = /* @__PURE__ */ fileDesc("CixjYXBhYmlsaXRpZXMvc2NoZWR1bGVyL2Nyb24vdjEvdHJpZ2dlci5wcm90bxIeY2FwYWJpbGl0aWVzLnNjaGVkdWxlci5jcm9uLnYxIhoKBkNvbmZpZxIQCghzY2hlZHVsZRgBIAEoCSJHCgdQYXlsb2FkEjwKGHNjaGVkdWxlZF9leGVjdXRpb25fdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiNQoNTGVnYWN5UGF5bG9hZBIgChhzY2hlZHVsZWRfZXhlY3V0aW9uX3RpbWUYASABKAk6AhgBMvUBCgRDcm9uElwKB1RyaWdnZXISJi5jYXBhYmlsaXRpZXMuc2NoZWR1bGVyLmNyb24udjEuQ29uZmlnGicuY2FwYWJpbGl0aWVzLnNjaGVkdWxlci5jcm9uLnYxLlBheWxvYWQwARJzCg1MZWdhY3lUcmlnZ2VyEiYuY2FwYWJpbGl0aWVzLnNjaGVkdWxlci5jcm9uLnYxLkNvbmZpZxotLmNhcGFiaWxpdGllcy5zY2hlZHVsZXIuY3Jvbi52MS5MZWdhY3lQYXlsb2FkIgmIAgGKtRgCCAEwARoagrUYFggBEhJjcm9uLXRyaWdnZXJAMS4wLjBCzQEKImNvbS5jYXBhYmlsaXRpZXMuc2NoZWR1bGVyLmNyb24udjFCDFRyaWdnZXJQcm90b1ABogIDQ1NDqgIeQ2FwYWJpbGl0aWVzLlNjaGVkdWxlci5Dcm9uLlYxygIeQ2FwYWJpbGl0aWVzXFNjaGVkdWxlclxDcm9uXFYx4gIqQ2FwYWJpbGl0aWVzXFNjaGVkdWxlclxDcm9uXFYxXEdQQk1ldGFkYXRh6gIhQ2FwYWJpbGl0aWVzOjpTY2hlZHVsZXI6OkNyb246OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_tools_generator_v1alpha_cre_metadata]);
 var ConfigSchema2 = /* @__PURE__ */ messageDesc(file_capabilities_scheduler_cron_v1_trigger, 0);
 var PayloadSchema2 = /* @__PURE__ */ messageDesc(file_capabilities_scheduler_cron_v1_trigger, 1);
@@ -7557,6 +7655,16 @@ var handler = (trigger, fn) => ({
   fn
 });
 prepareRuntime();
+var cre = {
+  capabilities: {
+    CronCapability,
+    HTTPCapability,
+    ConfidentialHTTPClient: ClientCapability2,
+    HTTPClient: ClientCapability3,
+    EVMClient: ClientCapability
+  },
+  handler
+};
 var LAST_FINALIZED_BLOCK_NUMBER = {
   absVal: Buffer.from([3]).toString("base64"),
   sign: "-1"
@@ -7570,6 +7678,15 @@ var encodeCallMsg = (payload) => ({
   to: hexToBase64(payload.to),
   data: hexToBase64(payload.data)
 });
+function ok(responseOrFn) {
+  if (typeof responseOrFn === "function") {
+    return {
+      result: () => ok(responseOrFn().result)
+    };
+  } else {
+    return responseOrFn.statusCode >= 200 && responseOrFn.statusCode < 300;
+  }
+}
 function sendReport(runtime, report, fn) {
   const rawReport = report.x_generatedCodeOnly_unwrap();
   const request = fn(rawReport);
@@ -7580,8 +7697,8 @@ function sendRequesterSendReport(report, fn) {
   const request = fn(rawReport);
   return this.sendRequest(request);
 }
-ClientCapability2.prototype.sendReport = sendReport;
-SendRequester.prototype.sendReport = sendRequesterSendReport;
+ClientCapability3.prototype.sendReport = sendReport;
+SendRequester2.prototype.sendReport = sendRequesterSendReport;
 var network = {
   chainId: "1",
   chainSelector: {
@@ -11199,6 +11316,33 @@ var defaultLookup = new NetworkLookup({
   testnetBySelectorByFamily
 });
 var getNetwork = (options) => defaultLookup.find(options);
+function consensusIdenticalAggregation() {
+  return simpleConsensus(AggregationType.IDENTICAL);
+}
+
+class ConsensusImpl {
+  descriptor;
+  defaultValue;
+  constructor(descriptor, defaultValue) {
+    this.descriptor = descriptor;
+    this.defaultValue = defaultValue;
+  }
+  withDefault(t) {
+    return new ConsensusImpl(this.descriptor, t);
+  }
+  _usesUToForceShape(_) {}
+}
+function simpleConsensus(agg) {
+  return new ConsensusImpl(simpleDescriptor(agg));
+}
+function simpleDescriptor(agg) {
+  return create(ConsensusDescriptorSchema, {
+    descriptor: {
+      case: "aggregation",
+      value: agg
+    }
+  });
+}
 
 class Int64 {
   static INT64_MIN = -(2n ** 63n);
@@ -17525,6 +17669,299 @@ var RiskOracleAbi = [
     inputs: []
   }
 ];
+
+class StructuredLogger {
+  runtime;
+  constructor(runtime2) {
+    this.runtime = runtime2;
+  }
+  info(message, context) {
+    const log = context ? `${message} | ${JSON.stringify(context)}` : message;
+    this.runtime.log(`ℹ️  ${log}`);
+  }
+  error(message, error, context) {
+    const errorMsg = error ? `${message}: ${error.message}` : message;
+    const log = context ? `${errorMsg} | ${JSON.stringify(context)}` : errorMsg;
+    this.runtime.log(`❌ ${log}`);
+  }
+  warn(message, context) {
+    const log = context ? `${message} | ${JSON.stringify(context)}` : message;
+    this.runtime.log(`⚠️  ${log}`);
+  }
+  success(message, context) {
+    const log = context ? `${message} | ${JSON.stringify(context)}` : message;
+    this.runtime.log(`✅ ${log}`);
+  }
+}
+async function withErrorHandling(fn, context) {
+  try {
+    return await fn();
+  } catch (error) {
+    const logger = new StructuredLogger(context.runtime);
+    logger.error(`Failed: ${context.operation}`, error);
+    throw error;
+  }
+}
+var buildPostRequest = (url, body, headers) => (sendRequester, _config) => {
+  const bodyBytes = new TextEncoder().encode(JSON.stringify(body));
+  const encodedBody = Buffer.from(bodyBytes).toString("base64");
+  const req = {
+    url,
+    method: "POST",
+    body: encodedBody,
+    headers: {
+      "Content-Type": "application/json",
+      ...headers
+    }
+  };
+  const resp = sendRequester.sendRequest(req).result();
+  const bodyText = new TextDecoder().decode(resp.body);
+  if (!ok(resp)) {
+    throw new Error(`HTTP ${resp.statusCode}: ${bodyText}`);
+  }
+  return JSON.parse(bodyText);
+};
+function makeHttpPost(runtime2, url, body, headers) {
+  const httpClient = new cre.capabilities.HTTPClient;
+  const result = httpClient.sendRequest(runtime2, buildPostRequest(url, body, headers), consensusIdenticalAggregation())(runtime2.config).result();
+  return result;
+}
+
+class GeminiClient {
+  logger;
+  apiKey;
+  baseUrl;
+  model;
+  constructor(runtime2, apiKey, model = "gemini-2.5-flash") {
+    this.logger = new StructuredLogger(runtime2);
+    this.apiKey = apiKey;
+    this.baseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
+    this.model = model;
+  }
+  analyze(runtime2, request) {
+    this.logger.info("Gemini: Generating AI analysis");
+    try {
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              {
+                text: request.prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: request.temperature || 0.7,
+          maxOutputTokens: request.maxTokens || 2048
+        }
+      };
+      const response = makeHttpPost(runtime2, `${this.baseUrl}/${this.model}:generateContent?key=${this.apiKey}`, requestBody, {});
+      const analysis = this.parseGeminiResponse(response);
+      this.logger.success("Gemini: Analysis complete", {
+        confidence: analysis.confidence,
+        recommendationCount: analysis.recommendations.length
+      });
+      return analysis;
+    } catch (error) {
+      this.logger.error("Gemini: Analysis failed", error);
+      throw error;
+    }
+  }
+  parseGeminiResponse(response) {
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const recommendations = this.extractRecommendations(text);
+    const reasoning = this.extractReasoning(text);
+    const confidence = this.extractConfidence(text);
+    return {
+      analysis: text,
+      confidence,
+      reasoning,
+      recommendations
+    };
+  }
+  extractRecommendations(text) {
+    const recommendations = [];
+    const lines = text.split(`
+`);
+    for (const line of lines) {
+      if (line.match(/^\d+\./) || line.match(/^[-*]/) || line.toLowerCase().includes("recommend")) {
+        const cleaned = line.replace(/^\d+\./, "").replace(/^[-*]/, "").trim();
+        if (cleaned.length > 10) {
+          recommendations.push(cleaned);
+        }
+      }
+    }
+    return recommendations;
+  }
+  extractReasoning(text) {
+    const reasoning = [];
+    const keywords = [
+      "because",
+      "due to",
+      "given that",
+      "considering",
+      "therefore"
+    ];
+    const sentences = text.split(/[.!?]/);
+    for (const sentence of sentences) {
+      for (const keyword of keywords) {
+        if (sentence.toLowerCase().includes(keyword)) {
+          reasoning.push(sentence.trim());
+          break;
+        }
+      }
+    }
+    return reasoning.slice(0, 5);
+  }
+  extractConfidence(text) {
+    const confidenceMatch = text.match(/confidence[:\s]+(\d+)%/i);
+    if (confidenceMatch) {
+      return parseInt(confidenceMatch[1]);
+    }
+    const lowConfidenceWords = [
+      "might",
+      "could",
+      "possibly",
+      "uncertain",
+      "unclear"
+    ];
+    const highConfidenceWords = [
+      "will",
+      "definitely",
+      "certainly",
+      "clearly",
+      "strongly"
+    ];
+    let score = 70;
+    for (const word of lowConfidenceWords) {
+      if (text.toLowerCase().includes(word))
+        score -= 5;
+    }
+    for (const word of highConfidenceWords) {
+      if (text.toLowerCase().includes(word))
+        score += 5;
+    }
+    return Math.max(0, Math.min(100, score));
+  }
+  analyzePortfolioRisk(runtime2, portfolioData) {
+    const prompt = `You are an expert DeFi risk analyst. Analyze the following portfolio and provide a detailed risk assessment.
+
+Portfolio Data:
+- Total Assets: ${portfolioData.totalAssets} USDC
+- Current Risk Score: ${portfolioData.currentRiskScore}/100
+${portfolioData.assetAllocations ? `- Asset Allocations: ${JSON.stringify(portfolioData.assetAllocations)}` : ""}
+${portfolioData.marketConditions ? `- Market Conditions: ${portfolioData.marketConditions}` : ""}
+
+Please provide:
+1. Updated risk score (0-100) with justification
+2. Key risk factors identified
+3. Specific recommendations to mitigate risks
+4. Your confidence level in this assessment (0-100%)
+
+Format your response clearly with sections for each item.`;
+    return this.analyze(runtime2, { prompt, maxTokens: 1500 });
+  }
+  generateRebalancingAdvice(runtime2, data) {
+    const prompt = `You are an expert DeFi portfolio manager. Generate rebalancing recommendations for the following portfolio.
+
+Portfolio Data:
+- Total Assets: ${data.totalAssets} USDC
+- Current Allocations: ${JSON.stringify(data.currentAllocations)}
+- Risk Score: ${data.riskScore}/100
+- Target Risk Level: ${data.targetRiskLevel}
+
+Please provide:
+1. Recommended asset allocation changes (specific percentages)
+2. Execution strategy (immediate vs gradual)
+3. Expected impact on risk profile
+4. Timeline for rebalancing
+5. Your confidence level (0-100%)
+
+Be specific with numerical recommendations and provide clear reasoning.`;
+    return this.analyze(runtime2, { prompt, maxTokens: 2000, temperature: 0.5 });
+  }
+}
+
+class PinataClient {
+  logger;
+  apiKey;
+  apiSecret;
+  baseUrl;
+  constructor(runtime2, apiKey, apiSecret) {
+    this.logger = new StructuredLogger(runtime2);
+    this.apiKey = apiKey;
+    this.apiSecret = apiSecret;
+    this.baseUrl = "https://api.pinata.cloud";
+  }
+  uploadJSON(runtime2, data, metadata) {
+    this.logger.info("Pinata: Uploading to IPFS", {
+      name: metadata?.name || "unnamed"
+    });
+    try {
+      const requestBody = {
+        pinataContent: data,
+        pinataMetadata: metadata || {}
+      };
+      const response = makeHttpPost(runtime2, `${this.baseUrl}/pinning/pinJSONToIPFS`, requestBody, {
+        pinata_api_key: this.apiKey,
+        pinata_secret_api_key: this.apiSecret
+      });
+      const result = {
+        ipfsHash: response.IpfsHash,
+        pinataUrl: `https://gateway.pinata.cloud/ipfs/${response.IpfsHash}`,
+        timestamp: Date.now()
+      };
+      this.logger.success("Pinata: Upload successful", {
+        ipfsHash: result.ipfsHash
+      });
+      return result;
+    } catch (error) {
+      this.logger.error("Pinata: Upload failed", error);
+      throw error;
+    }
+  }
+  uploadRiskReport(runtime2, report2) {
+    const result = this.uploadJSON(runtime2, report2, {
+      name: `risk-report-${Date.now()}`,
+      keyvalues: {
+        type: "risk_assessment",
+        score: report2.riskScore.toString()
+      }
+    });
+    return result.ipfsHash;
+  }
+  uploadComplianceReport(runtime2, report2) {
+    const result = this.uploadJSON(runtime2, report2, {
+      name: `compliance-report-${Date.now()}`,
+      keyvalues: {
+        type: "compliance_screening",
+        status: report2.status
+      }
+    });
+    return result.ipfsHash;
+  }
+  uploadReserveReport(runtime2, report2) {
+    const result = this.uploadJSON(runtime2, report2, {
+      name: `reserve-report-${Date.now()}`,
+      keyvalues: {
+        type: "proof_of_reserve",
+        ratio: report2.reserveRatio
+      }
+    });
+    return result.ipfsHash;
+  }
+  uploadRebalancingReport(runtime2, report2) {
+    const result = this.uploadJSON(runtime2, report2, {
+      name: `rebalancing-report-${Date.now()}`,
+      keyvalues: {
+        type: "rebalancing_advisory",
+        score: report2.riskScore.toString()
+      }
+    });
+    return result.ipfsHash;
+  }
+}
 var configSchema = exports_external.object({
   schedule: exports_external.string(),
   fundVaultAddress: exports_external.string(),
@@ -17535,8 +17972,11 @@ var configSchema = exports_external.object({
     low: exports_external.number(),
     medium: exports_external.number(),
     high: exports_external.number(),
-    critical: exports_external.number()
-  })
+    updateThreshold: exports_external.number()
+  }),
+  geminiApiKey: exports_external.string(),
+  pinataApiKey: exports_external.string(),
+  pinataApiSecret: exports_external.string()
 });
 var getTotalAssets = (runtime2) => {
   const network248 = getNetwork({
@@ -17552,7 +17992,6 @@ var getTotalAssets = (runtime2) => {
     abi: FundVaultAbi,
     functionName: "totalAssets"
   });
-  runtime2.log("\uD83D\uDCCA Fetching total assets from FundVault...");
   const contractCall = evmClient.callContract(runtime2, {
     call: encodeCallMsg({
       from: zeroAddress,
@@ -17590,30 +18029,54 @@ var getCurrentRiskScore = (runtime2) => {
     }),
     blockNumber: LAST_FINALIZED_BLOCK_NUMBER
   }).result();
-  const riskScore = decodeFunctionResult({
+  const result = decodeFunctionResult({
     abi: RiskOracleAbi,
     functionName: "getCurrentRiskScore",
     data: bytesToHex(contractCall.data)
   });
-  return riskScore;
+  return result[0];
 };
-var calculateRiskScore = (runtime2, totalAssets) => {
-  const assetsInUSDC = Number(totalAssets) / 1e6;
-  runtime2.log(`\uD83D\uDCB0 Portfolio size: $${assetsInUSDC.toLocaleString()} USDC`);
-  let riskScore;
-  if (assetsInUSDC < 1e4) {
-    riskScore = 20;
-  } else if (assetsInUSDC < 1e5) {
-    riskScore = 40;
-  } else if (assetsInUSDC < 1e6) {
-    riskScore = 60;
-  } else {
-    riskScore = 75;
+var calculateRiskScore = (runtime2, portfolioData) => {
+  const logger = new StructuredLogger(runtime2);
+  const gemini = new GeminiClient(runtime2, runtime2.config.geminiApiKey);
+  const assetsInUSDC = Number(portfolioData.totalAssets) / 1e6;
+  logger.info("Requesting Gemini AI risk analysis", {
+    totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+    currentRiskScore: Number(portfolioData.currentRiskScore)
+  });
+  const geminiAnalysis = gemini.analyzePortfolioRisk(runtime2, {
+    totalAssets: `$${assetsInUSDC.toLocaleString()} USDC`,
+    currentRiskScore: Number(portfolioData.currentRiskScore),
+    marketConditions: "normal"
+  });
+  const riskScore = extractRiskScoreFromAnalysis(geminiAnalysis.analysis, assetsInUSDC);
+  logger.success("Gemini analysis complete", {
+    riskScore,
+    confidence: geminiAnalysis.confidence,
+    recommendationCount: geminiAnalysis.recommendations.length
+  });
+  return {
+    riskScore,
+    analysis: geminiAnalysis.analysis,
+    recommendations: geminiAnalysis.recommendations
+  };
+};
+function extractRiskScoreFromAnalysis(analysis, portfolioSize) {
+  const scoreMatch = analysis.match(/(?:risk\s+score|score)[:\s]+(\d+)(?:\/100)?/i);
+  if (scoreMatch) {
+    return parseInt(scoreMatch[1]);
   }
-  runtime2.log(`\uD83D\uDCC8 Calculated risk score: ${riskScore}/100`);
-  return riskScore;
-};
-var updateRiskOracle = (runtime2, riskScore, ipfsHash) => {
+  if (portfolioSize === 0)
+    return 20;
+  if (portfolioSize < 1e4)
+    return 25;
+  if (portfolioSize < 1e5)
+    return 35;
+  if (portfolioSize < 1e6)
+    return 45;
+  return 55;
+}
+var updateRiskOracle = (runtime2, newRiskScore, ipfsHash) => {
   const network248 = getNetwork({
     chainFamily: "evm",
     chainSelectorName: runtime2.config.chainSelectorName,
@@ -17623,11 +18086,12 @@ var updateRiskOracle = (runtime2, riskScore, ipfsHash) => {
     throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
-  runtime2.log(`\uD83D\uDD04 Updating RiskOracle with score: ${riskScore}, hash: ${ipfsHash}`);
+  const logger = new StructuredLogger(runtime2);
+  logger.info("Updating RiskOracle", { newRiskScore, ipfsHash });
   const callData = encodeFunctionData({
     abi: RiskOracleAbi,
     functionName: "updateRiskScore",
-    args: [BigInt(riskScore), ipfsHash]
+    args: [BigInt(newRiskScore), ipfsHash]
   });
   const reportResponse = runtime2.report({
     encodedPayload: hexToBase64(callData),
@@ -17642,33 +18106,56 @@ var updateRiskOracle = (runtime2, riskScore, ipfsHash) => {
       gasLimit: runtime2.config.gasLimit
     }
   }).result();
-  const txStatus = resp.txStatus;
-  if (txStatus !== TxStatus.SUCCESS) {
-    throw new Error(`Failed to update RiskOracle: ${resp.errorMessage || txStatus}`);
+  if (resp.txStatus !== TxStatus.SUCCESS) {
+    throw new Error(`Failed to update RiskOracle: ${resp.errorMessage || resp.txStatus}`);
   }
-  const txHash = resp.txHash || new Uint8Array(32);
-  runtime2.log(`✅ RiskOracle updated! TxHash: ${bytesToHex(txHash)}`);
-  return bytesToHex(txHash);
-};
-var monitorPortfolioHealth = (runtime2) => {
-  runtime2.log("\uD83D\uDE80 Starting Portfolio Health Monitoring...");
-  const totalAssets = getTotalAssets(runtime2);
-  const currentScore = getCurrentRiskScore(runtime2);
-  runtime2.log(`\uD83D\uDCCA Current risk score: ${currentScore}`);
-  const newRiskScore = calculateRiskScore(runtime2, totalAssets);
-  const scoreDiff = Math.abs(Number(currentScore) - newRiskScore);
-  if (scoreDiff < 5) {
-    runtime2.log(`⏭️  Score change too small (${scoreDiff}), skipping update`);
-    return `No update needed. Current: ${currentScore}, New: ${newRiskScore}`;
-  }
-  const ipfsHash = `QmRiskReport${newRiskScore}`;
-  const txHash = updateRiskOracle(runtime2, newRiskScore, ipfsHash);
-  runtime2.log("✅ Portfolio Health Monitoring Complete!");
+  const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
+  logger.success("RiskOracle updated", { txHash });
   return txHash;
 };
-var onCronTrigger = (runtime2, payload) => {
-  runtime2.log(`⏰ Cron triggered - starting portfolio health check`);
-  return monitorPortfolioHealth(runtime2);
+var runPortfolioHealthWorkflow = async (runtime2) => {
+  const logger = new StructuredLogger(runtime2);
+  logger.info("\uD83D\uDE80 Starting Production Portfolio Health Monitoring");
+  return withErrorHandling(async () => {
+    const totalAssets = getTotalAssets(runtime2);
+    const currentScore = getCurrentRiskScore(runtime2);
+    logger.info("Portfolio data retrieved", {
+      totalAssets: `$${(Number(totalAssets) / 1e6).toLocaleString()}`,
+      currentScore: Number(currentScore)
+    });
+    const riskAnalysis = calculateRiskScore(runtime2, {
+      totalAssets,
+      currentRiskScore: currentScore
+    });
+    const scoreDiff = Math.abs(Number(currentScore) - riskAnalysis.riskScore);
+    if (scoreDiff < runtime2.config.riskThresholds.updateThreshold) {
+      logger.info("Score change too small, skipping update", {
+        diff: scoreDiff,
+        threshold: runtime2.config.riskThresholds.updateThreshold
+      });
+      return "No update needed";
+    }
+    const pinata = new PinataClient(runtime2, runtime2.config.pinataApiKey, runtime2.config.pinataApiSecret);
+    const ipfsHash = pinata.uploadRiskReport(runtime2, {
+      timestamp: Date.now(),
+      riskScore: riskAnalysis.riskScore,
+      totalAssets: `$${Number(totalAssets) / 1e6}`,
+      analysis: riskAnalysis.analysis,
+      recommendations: riskAnalysis.recommendations
+    });
+    logger.success("Risk report uploaded to IPFS", { ipfsHash });
+    const txHash = updateRiskOracle(runtime2, riskAnalysis.riskScore, ipfsHash);
+    logger.success("✅ Portfolio Health Monitoring Complete", {
+      txHash,
+      ipfsHash,
+      newRiskScore: riskAnalysis.riskScore
+    });
+    return txHash;
+  }, { operation: "Portfolio Health Monitoring", runtime: runtime2 });
+};
+var onCronTrigger = async (runtime2, payload) => {
+  runtime2.log("⏰ Cron triggered - starting portfolio health check");
+  return runPortfolioHealthWorkflow(runtime2);
 };
 var initWorkflow = (config) => {
   const cronTrigger = new CronCapability;

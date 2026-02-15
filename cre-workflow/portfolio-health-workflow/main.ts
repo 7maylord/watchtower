@@ -11,6 +11,7 @@ import {
   Runner,
   type Runtime,
   TxStatus,
+  cre,
 } from "@chainlink/cre-sdk";
 import {
   type Address,
@@ -20,9 +21,9 @@ import {
 } from "viem";
 import { z } from "zod";
 import { FundVaultAbi, RiskOracleAbi } from "../contracts/abi";
-import { GeminiClient } from "../shared/gemini";
-import { PinataClient } from "../shared/pinata";
-import { StructuredLogger, withErrorHandling } from "../shared/utils";
+import { GeminiClient } from "./gemini";
+import { PinataClient } from "./pinata";
+import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
 const configSchema = z.object({
@@ -139,14 +140,14 @@ const getCurrentRiskScore = (runtime: Runtime<Config>): bigint => {
 /**
  * Calculate risk score using Gemini AI
  */
-const calculateRiskScore = async (
+const calculateRiskScore = (
   runtime: Runtime<Config>,
   portfolioData: { totalAssets: bigint; currentRiskScore: bigint },
-): Promise<{
+): {
   riskScore: number;
   analysis: string;
   recommendations: string[];
-}> => {
+} => {
   const logger = new StructuredLogger(runtime);
   const gemini = new GeminiClient(runtime, runtime.config.geminiApiKey);
 
@@ -158,28 +159,28 @@ const calculateRiskScore = async (
   });
 
   // Use Gemini for comprehensive risk analysis
-  const analysis = await gemini.analyzePortfolioRisk({
+  const geminiAnalysis = gemini.analyzePortfolioRisk(runtime, {
     totalAssets: `$${assetsInUSDC.toLocaleString()} USDC`,
     currentRiskScore: Number(portfolioData.currentRiskScore),
-    marketConditions: "Moderate volatility in DeFi markets",
+    marketConditions: "normal", // Could be enhanced with real market data
   });
 
   // Extract risk score from analysis
   const riskScore = extractRiskScoreFromAnalysis(
-    analysis.analysis,
+    geminiAnalysis.analysis,
     assetsInUSDC,
   );
 
   logger.success("Gemini analysis complete", {
     riskScore,
-    confidence: analysis.confidence,
-    recommendationCount: analysis.recommendations.length,
+    confidence: geminiAnalysis.confidence,
+    recommendationCount: geminiAnalysis.recommendations.length,
   });
 
   return {
     riskScore,
-    analysis: analysis.analysis,
-    recommendations: analysis.recommendations,
+    analysis: geminiAnalysis.analysis,
+    recommendations: geminiAnalysis.recommendations,
   };
 };
 
@@ -290,7 +291,7 @@ const runPortfolioHealthWorkflow = async (
       });
 
       // Step 2: Calculate new risk score using Gemini AI
-      const riskAnalysis = await calculateRiskScore(runtime, {
+      const riskAnalysis = calculateRiskScore(runtime, {
         totalAssets,
         currentRiskScore: currentScore,
       });
@@ -313,13 +314,12 @@ const runPortfolioHealthWorkflow = async (
         runtime.config.pinataApiSecret,
       );
 
-      const ipfsHash = await pinata.uploadRiskReport({
+      const ipfsHash = pinata.uploadRiskReport(runtime, {
         timestamp: Date.now(),
         riskScore: riskAnalysis.riskScore,
-        portfolioSize: `$${(Number(totalAssets) / 1e6).toLocaleString()} USDC`,
+        totalAssets: `$${Number(totalAssets) / 1e6}`,
         analysis: riskAnalysis.analysis,
         recommendations: riskAnalysis.recommendations,
-        dataSource: "Gemini AI Analysis",
       });
 
       logger.success("Risk report uploaded to IPFS", { ipfsHash });

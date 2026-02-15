@@ -20,9 +20,9 @@ import {
 } from "viem";
 import { z } from "zod";
 import { FundVaultAbi, RiskOracleAbi } from "../contracts/abi";
-import { GeminiClient } from "../shared/gemini";
-import { PinataClient } from "../shared/pinata";
-import { StructuredLogger, withErrorHandling } from "../shared/utils";
+import { GeminiClient } from "./gemini";
+import { PinataClient } from "./pinata";
+import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
 const configSchema = z.object({
@@ -191,7 +191,7 @@ const getCurrentRiskScore = (runtime: Runtime<Config>): number => {
 /**
  * Generate AI-powered rebalancing recommendations
  */
-const generateRebalancingAdvice = async (
+const generateRebalancingAdvice = (
   runtime: Runtime<Config>,
   portfolioData: {
     totalAssets: bigint;
@@ -199,14 +199,14 @@ const generateRebalancingAdvice = async (
     sharePrice: bigint;
   },
   riskScore: number,
-): Promise<{
+): {
   shouldRebalance: boolean;
   recommendation: string;
   reasoning: string;
   expectedImpact: string;
   confidence: number;
   analysis: string;
-}> => {
+} => {
   const logger = new StructuredLogger(runtime);
   const gemini = new GeminiClient(runtime, runtime.config.geminiApiKey);
 
@@ -241,7 +241,7 @@ const generateRebalancingAdvice = async (
   }
 
   // Use Gemini for rebalancing recommendations
-  const aiAnalysis = await gemini.generateRebalancingAdvice({
+  const aiAnalysis = gemini.generateRebalancingAdvice(runtime, {
     totalAssets: `$${assetsInUSDC.toLocaleString()} USDC`,
     currentAllocations: {
       stablecoins: 60,
@@ -297,7 +297,7 @@ const runRebalancingAdvisoryWorkflow = async (
       logger.info("Current risk score", { riskScore });
 
       // Step 3: Generate AI rebalancing advice
-      const advice = await generateRebalancingAdvice(
+      const advice = generateRebalancingAdvice(
         runtime,
         portfolioData,
         riskScore,
@@ -316,14 +316,22 @@ const runRebalancingAdvisoryWorkflow = async (
         runtime.config.pinataApiSecret,
       );
 
-      const ipfsHash = await pinata.uploadRebalancingReport({
+      const uploadData = {
         timestamp: Date.now(),
-        recommendation: advice.recommendation,
-        reasoning: advice.reasoning,
-        expectedImpact: advice.expectedImpact,
-        confidence: advice.confidence,
-        analysis: advice.analysis,
-      });
+        riskScore: riskScore || 0,
+        totalAssets: `$${assetsInUSDC.toLocaleString()} USDC`,
+        recommendations: [advice.recommendation || "HOLD"],
+        analysis: advice.analysis || "No analysis available",
+      };
+
+      let ipfsHash = "N/A";
+      try {
+        ipfsHash = pinata.uploadRebalancingReport(runtime, uploadData);
+      } catch (uploadError) {
+        logger.warn("Pinata upload failed, continuing without IPFS", {
+          error: (uploadError as Error).message,
+        });
+      }
 
       logger.success("Advisory report uploaded to IPFS", { ipfsHash });
 
