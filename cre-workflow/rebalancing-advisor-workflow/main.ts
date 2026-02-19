@@ -21,7 +21,7 @@ import {
 import { z } from "zod";
 import { FundVaultAbi, RiskOracleAbi } from "../contracts/abi";
 import { GeminiClient } from "./gemini";
-import { PinataClient } from "./pinata";
+import { FirebaseClient } from "./firebase";
 import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
@@ -36,8 +36,8 @@ const configSchema = z.object({
     minPortfolioSize: z.number(),
   }),
   geminiApiKey: z.string(),
-  pinataApiKey: z.string(),
-  pinataApiSecret: z.string(),
+  firebaseApiKey: z.string(),
+  firebaseProjectId: z.string(),
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -46,7 +46,7 @@ type Config = z.infer<typeof configSchema>;
  * PRODUCTION Rebalancing Advisor Workflow
  *
  * Uses Gemini AI for portfolio analysis and rebalancing recommendations
- * Stores advisory reports on IPFS via Pinata
+ * Stores advisory reports on Firebase Firestore
  */
 
 /**
@@ -309,11 +309,11 @@ const runRebalancingAdvisoryWorkflow = async (
         confidence: advice.confidence,
       });
 
-      // Step 4: Upload advisory report to IPFS
-      const pinata = new PinataClient(
+      // Step 4: Upload advisory report to Firebase
+      const firebase = new FirebaseClient(
         runtime,
-        runtime.config.pinataApiKey,
-        runtime.config.pinataApiSecret,
+        runtime.config.firebaseApiKey,
+        runtime.config.firebaseProjectId,
       );
 
       const uploadData = {
@@ -326,9 +326,9 @@ const runRebalancingAdvisoryWorkflow = async (
 
       let ipfsHash = "N/A";
       try {
-        ipfsHash = pinata.uploadRebalancingReport(runtime, uploadData);
+        ipfsHash = firebase.uploadRebalancingReport(runtime, uploadData);
       } catch (uploadError) {
-        logger.warn("Pinata upload failed, continuing without IPFS", {
+        logger.warn("Firebase upload failed, continuing without storage", {
           error: (uploadError as Error).message,
         });
       }

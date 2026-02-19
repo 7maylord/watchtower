@@ -22,7 +22,7 @@ import {
 import { z } from "zod";
 import { FundVaultAbi, RiskOracleAbi } from "../contracts/abi";
 import { GeminiClient } from "./gemini";
-import { PinataClient } from "./pinata";
+import { FirebaseClient } from "./firebase";
 import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
@@ -39,8 +39,8 @@ const configSchema = z.object({
     updateThreshold: z.number(),
   }),
   geminiApiKey: z.string(),
-  pinataApiKey: z.string(),
-  pinataApiSecret: z.string(),
+  firebaseApiKey: z.string(),
+  firebaseProjectId: z.string(),
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -48,7 +48,7 @@ type Config = z.infer<typeof configSchema>;
 /**
  * PRODUCTION Portfolio Health Monitoring Workflow
  *
- * Uses Gemini AI for comprehensive risk analysis and Pinata IPFS for report storage
+ * Uses Gemini AI for comprehensive risk analysis and Firebase Firestore for report storage
  */
 
 /**
@@ -307,14 +307,14 @@ const runPortfolioHealthWorkflow = async (
         return "No update needed";
       }
 
-      // Step 4: Upload detailed report to IPFS
-      const pinata = new PinataClient(
+      // Step 4: Upload detailed report to Firebase
+      const firebase = new FirebaseClient(
         runtime,
-        runtime.config.pinataApiKey,
-        runtime.config.pinataApiSecret,
+        runtime.config.firebaseApiKey,
+        runtime.config.firebaseProjectId,
       );
 
-      const ipfsHash = pinata.uploadRiskReport(runtime, {
+      const ipfsHash = firebase.uploadRiskReport(runtime, {
         timestamp: Date.now(),
         riskScore: riskAnalysis.riskScore,
         totalAssets: `$${Number(totalAssets) / 1e6}`,
@@ -322,7 +322,7 @@ const runPortfolioHealthWorkflow = async (
         recommendations: riskAnalysis.recommendations,
       });
 
-      logger.success("Risk report uploaded to IPFS", { ipfsHash });
+      logger.success("Risk report uploaded to Firebase", { ipfsHash });
 
       // Step 5: Update RiskOracle
       const txHash = updateRiskOracle(

@@ -21,7 +21,7 @@ import {
 import { z } from "zod";
 import { ComplianceRegistryAbi } from "../contracts/abi";
 import { ChainalysisClient } from "./chainalysis";
-import { PinataClient } from "./pinata";
+import { FirebaseClient } from "./firebase";
 import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
@@ -31,8 +31,8 @@ const configSchema = z.object({
   chainSelectorName: z.string(),
   gasLimit: z.string(),
   chainalysisApiKey: z.string(),
-  pinataApiKey: z.string(),
-  pinataApiSecret: z.string(),
+  firebaseApiKey: z.string(),
+  firebaseProjectId: z.string(),
 });
 type Config = z.infer<typeof configSchema>;
 
@@ -41,7 +41,7 @@ type Config = z.infer<typeof configSchema>;
  *
  * Performs comprehensive KYC/AML screening using:
  * - Chainalysis KYT for sanctions and risk assessment
- * - IPFS (Pinata) for audit trail storage
+ * - Firebase Firestore for audit trail storage
  * - On-chain ComplianceRegistry updates
  */
 
@@ -114,10 +114,10 @@ const performComplianceScreening = async (
     runtime,
     runtime.config.chainalysisApiKey,
   );
-  const pinata = new PinataClient(
+  const firebase = new FirebaseClient(
     runtime,
-    runtime.config.pinataApiKey,
-    runtime.config.pinataApiSecret,
+    runtime.config.firebaseApiKey,
+    runtime.config.firebaseProjectId,
   );
 
   logger.info("Starting Chainalysis screening", { address: investorAddress });
@@ -138,16 +138,16 @@ const performComplianceScreening = async (
   // Upload detailed report to IPFS
   let ipfsHash = "N/A";
   try {
-    ipfsHash = pinata.uploadComplianceReport(runtime, {
+    ipfsHash = firebase.uploadComplianceReport(runtime, {
       timestamp: Date.now(),
       address: investorAddress,
       status: shouldApprove ? "APPROVED" : "REJECTED",
       riskScore: screeningResult.riskScore,
       screeningDetails: `Sanctioned: ${screeningResult.isSanctioned}, Confidence: ${screeningResult.confidence}`,
     });
-    logger.success("Compliance report uploaded to IPFS", { ipfsHash });
+    logger.success("Compliance report uploaded to Firebase", { ipfsHash });
   } catch (uploadError) {
-    logger.warn("Pinata upload failed, continuing without IPFS", {
+    logger.warn("Firebase upload failed, continuing without storage", {
       error: (uploadError as Error).message,
     });
   }

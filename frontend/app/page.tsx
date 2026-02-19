@@ -6,7 +6,9 @@ import {
   Landmark,
   ArrowLeftRight,
   TrendingDown,
+  TrendingUp,
   Clock,
+  Loader2,
 } from "lucide-react";
 import {
   LineChart,
@@ -21,6 +23,12 @@ import DashboardLayout from "@/components/DashboardLayout";
 import StatusBadge from "@/components/StatusBadge";
 import RiskGauge from "@/components/RiskGauge";
 import { riskScoreHistory, recentActivity } from "@/lib/mock-data";
+import {
+  useRiskScore,
+  useReserveData,
+  useShouldLiquidate,
+  formatTimeAgo,
+} from "@/hooks/useContractData";
 
 const StatCard = ({
   icon: Icon,
@@ -47,7 +55,29 @@ const StatCard = ({
   </div>
 );
 
+const LoadingSkeleton = () => (
+  <div className="flex items-center gap-2">
+    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    <span className="text-xs text-muted-foreground">Loading…</span>
+  </div>
+);
+
 export default function Home() {
+  const { score, timestamp, isLoading: riskLoading } = useRiskScore();
+  const {
+    reserveRatio,
+    onChainReserves,
+    custodianReserves,
+    isHealthy,
+    isLoading: reserveLoading,
+  } = useReserveData();
+  const { shouldLiquidate } = useShouldLiquidate();
+
+  const displayScore = score ?? 32; // fallback to mock
+  const displayRatio = reserveRatio ?? 99.8;
+  const displayOnChain = onChainReserves ?? 2.39;
+  const displayCustodian = custodianReserves ?? 2.4;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -55,19 +85,43 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
             Institutional DeFi fund overview
+            {score !== undefined && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success border border-success/20">
+                ● Live from Sepolia
+              </span>
+            )}
           </p>
         </div>
+
+        {/* Liquidation Warning */}
+        {shouldLiquidate && (
+          <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-pulse">
+            ⚠️ Auto-liquidation triggered — risk score has exceeded the
+            threshold (≥ 85).
+          </div>
+        )}
 
         {/* Status Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={HeartPulse} title="Portfolio Health" delay={0}>
-            <div className="flex items-center justify-between">
-              <RiskGauge score={32} size={90} strokeWidth={8} label="" />
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Last updated</p>
-                <p className="text-xs text-foreground">2 min ago</p>
+            {riskLoading ? (
+              <LoadingSkeleton />
+            ) : (
+              <div className="flex items-center justify-between">
+                <RiskGauge
+                  score={displayScore}
+                  size={90}
+                  strokeWidth={8}
+                  label=""
+                />
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Last updated</p>
+                  <p className="text-xs text-foreground">
+                    {formatTimeAgo(timestamp)}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </StatCard>
 
           <StatCard icon={ShieldCheck} title="Compliance" delay={100}>
@@ -81,13 +135,30 @@ export default function Home() {
           </StatCard>
 
           <StatCard icon={Landmark} title="Reserve Ratio" delay={200}>
-            <div className="flex items-center gap-2">
-              <span className="text-3xl font-bold text-success">99.8%</span>
-              <TrendingDown className="h-4 w-4 text-warning" />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              <span>$2.39M</span> / <span>$2.40M reported</span>
-            </div>
+            {reserveLoading ? (
+              <LoadingSkeleton />
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-3xl font-bold ${
+                      isHealthy !== false ? "text-success" : "text-destructive"
+                    }`}
+                  >
+                    {displayRatio.toFixed(1)}%
+                  </span>
+                  {isHealthy !== false ? (
+                    <TrendingUp className="h-4 w-4 text-success" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-destructive" />
+                  )}
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <span>${displayOnChain.toFixed(2)}M</span> /{" "}
+                  <span>${displayCustodian.toFixed(2)}M reported</span>
+                </div>
+              </>
+            )}
           </StatCard>
 
           <StatCard icon={ArrowLeftRight} title="Rebalancing" delay={300}>

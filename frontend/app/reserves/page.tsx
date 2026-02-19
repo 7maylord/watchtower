@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -13,12 +13,40 @@ import {
 } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
 import { reserveRatioHistory } from "@/lib/mock-data";
-
-const currentRatio = 99.8;
-const reported = 2_400_000;
-const onChain = 2_395_200;
+import { useReserveData, formatTimeAgo } from "@/hooks/useContractData";
+import { CONTRACTS } from "@/lib/contracts";
 
 export default function ProofOfReserve() {
+  const {
+    reserveRatio,
+    onChainReserves,
+    custodianReserves,
+    isHealthy,
+    lastVerified,
+    isLoading,
+  } = useReserveData();
+
+  const displayRatio = reserveRatio ?? 99.8;
+  const displayOnChain = onChainReserves ?? 2_395_200;
+  const displayCustodian = custodianReserves ?? 2_400_000;
+  const displayHealthy = isHealthy ?? true;
+
+  // Format for display: if values from contract are in USDC (6 decimals already formatted),
+  // they might be small numbers or large depending on actual reserves
+  const onChainDisplay =
+    displayOnChain >= 1e6
+      ? `$${(displayOnChain / 1e6).toFixed(2)}M`
+      : displayOnChain >= 1e3
+        ? `$${(displayOnChain / 1e3).toFixed(1)}K`
+        : `$${displayOnChain.toFixed(2)}`;
+
+  const custodianDisplay =
+    displayCustodian >= 1e6
+      ? `$${(displayCustodian / 1e6).toFixed(2)}M`
+      : displayCustodian >= 1e3
+        ? `$${(displayCustodian / 1e3).toFixed(1)}K`
+        : `$${displayCustodian.toFixed(2)}`;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -28,14 +56,20 @@ export default function ProofOfReserve() {
           </h1>
           <p className="text-sm text-muted-foreground">
             On-chain reserve verification and attestation
+            {reserveRatio !== undefined && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success border border-success/20">
+                ● Live from Sepolia
+              </span>
+            )}
           </p>
         </div>
 
-        {currentRatio < 100 && (
+        {displayRatio < 100 && (
           <div className="flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4 animate-fade-in">
             <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
             <p className="text-sm text-warning">
-              Reserve ratio is below 100%. Current ratio: {currentRatio}%
+              Reserve ratio is below 100%. Current ratio:{" "}
+              {displayRatio.toFixed(1)}%
             </p>
           </div>
         )}
@@ -46,21 +80,25 @@ export default function ProofOfReserve() {
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Reserve Ratio
             </p>
-            <span
-              className={`text-5xl font-bold ${
-                currentRatio >= 100 ? "text-success" : "text-warning"
-              }`}
-            >
-              {currentRatio.toFixed(2)}%
-            </span>
+            {isLoading ? (
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground my-4" />
+            ) : (
+              <span
+                className={`text-5xl font-bold ${
+                  displayRatio >= 100 ? "text-success" : "text-warning"
+                }`}
+              >
+                {displayRatio.toFixed(2)}%
+              </span>
+            )}
             <div className="mt-4 flex items-center gap-1">
-              {currentRatio >= 100 ? (
+              {displayHealthy ? (
                 <CheckCircle className="h-4 w-4 text-success" />
               ) : (
                 <AlertTriangle className="h-4 w-4 text-warning" />
               )}
               <span className="text-xs text-muted-foreground">
-                {currentRatio >= 100
+                {displayHealthy
                   ? "Fully collateralized"
                   : "Under-collateralized"}
               </span>
@@ -74,20 +112,28 @@ export default function ProofOfReserve() {
           >
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Reported Reserves
+                Custodian Reserves
               </p>
-              <p className="text-3xl font-bold text-foreground">
-                ${(reported / 1e6).toFixed(2)}M
-              </p>
+              {isLoading ? (
+                <Loader2 className="inline h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <p className="text-3xl font-bold text-foreground">
+                  {custodianDisplay}
+                </p>
+              )}
               <p className="mt-1 text-sm text-muted-foreground">USDC</p>
             </div>
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                 On-Chain Balance
               </p>
-              <p className="text-3xl font-bold text-primary">
-                ${(onChain / 1e6).toFixed(2)}M
-              </p>
+              {isLoading ? (
+                <Loader2 className="inline h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <p className="text-3xl font-bold text-primary">
+                  {onChainDisplay}
+                </p>
+              )}
               <p className="mt-1 text-sm text-muted-foreground">USDC</p>
             </div>
           </div>
@@ -155,12 +201,26 @@ export default function ProofOfReserve() {
           </h3>
           <div className="grid gap-4 sm:grid-cols-2 text-sm">
             {[
-              ["Attestor", "Watchtower Risk Oracle"],
-              ["Last Attestation", "Feb 15, 2026 14:32 UTC"],
-              ["Vault Address", "0x7a3B...9f2E"],
+              ["Attestor", "Watchtower PoR Oracle"],
+              [
+                "Last Attestation",
+                lastVerified
+                  ? formatTimeAgo(lastVerified)
+                  : "Feb 15, 2026 14:32 UTC",
+              ],
+              [
+                "Oracle Address",
+                `${CONTRACTS.proofOfReserveOracle.slice(0, 6)}…${CONTRACTS.proofOfReserveOracle.slice(-4)}`,
+              ],
               ["Chain", "Ethereum Sepolia"],
-              ["IPFS Report", "QmReserve001..."],
-              ["Block Number", "19,847,293"],
+              [
+                "Vault Address",
+                `${CONTRACTS.fundVault.slice(0, 6)}…${CONTRACTS.fundVault.slice(-4)}`,
+              ],
+              [
+                "Health Status",
+                displayHealthy ? "✅ Sufficient" : "⚠️ Insufficient",
+              ],
             ].map(([k, v]) => (
               <div
                 key={k}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, ExternalLink } from "lucide-react";
+import { Play, ExternalLink, Loader2 } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -16,6 +16,11 @@ import RiskGauge from "@/components/RiskGauge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { riskBreakdown, healthAssessments } from "@/lib/mock-data";
+import {
+  useRiskScore,
+  useFundVaultStats,
+  formatTimeAgo,
+} from "@/hooks/useContractData";
 
 const aiRecommendations = [
   {
@@ -33,6 +38,18 @@ const aiRecommendations = [
 ];
 
 export default function PortfolioHealth() {
+  const { score, timestamp, ipfsHash, isLoading: riskLoading } = useRiskScore();
+  const {
+    totalSupply,
+    sharePrice,
+    isLoading: vaultLoading,
+  } = useFundVaultStats();
+
+  const displayScore = score ?? 32;
+  const displaySharePrice = sharePrice ?? 1.02;
+  const displayTotalAssets =
+    totalSupply && sharePrice ? (totalSupply * sharePrice) / 1e6 : 2.4;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -43,6 +60,11 @@ export default function PortfolioHealth() {
             </h1>
             <p className="text-sm text-muted-foreground">
               AI-powered risk analysis and recommendations
+              {score !== undefined && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success border border-success/20">
+                  ● Live
+                </span>
+              )}
             </p>
           </div>
           <Button className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground border-0">
@@ -54,14 +76,42 @@ export default function PortfolioHealth() {
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Gauge */}
           <div className="glass-card rounded-xl p-6 flex flex-col items-center justify-center opacity-0 animate-fade-in-up">
-            <RiskGauge score={32} size={200} strokeWidth={14} />
+            {riskLoading ? (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  Reading on-chain…
+                </span>
+              </div>
+            ) : (
+              <>
+                <RiskGauge score={displayScore} size={200} strokeWidth={14} />
+                {timestamp && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Updated {formatTimeAgo(timestamp)}
+                  </p>
+                )}
+              </>
+            )}
             <div className="mt-4 grid grid-cols-2 gap-4 w-full text-center">
               <div>
-                <p className="text-lg font-bold text-foreground">$2.4M</p>
+                <p className="text-lg font-bold text-foreground">
+                  {vaultLoading ? (
+                    <Loader2 className="inline h-4 w-4 animate-spin" />
+                  ) : (
+                    `$${displayTotalAssets.toFixed(1)}M`
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground">Total Assets</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-foreground">$1.02</p>
+                <p className="text-lg font-bold text-foreground">
+                  {vaultLoading ? (
+                    <Loader2 className="inline h-4 w-4 animate-spin" />
+                  ) : (
+                    `$${displaySharePrice.toFixed(2)}`
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground">Share Price</p>
               </div>
             </div>
@@ -92,6 +142,29 @@ export default function PortfolioHealth() {
             </div>
           </div>
         </div>
+
+        {/* IPFS Hash display */}
+        {ipfsHash && ipfsHash !== "" && (
+          <div
+            className="glass-card rounded-xl p-4 opacity-0 animate-fade-in-up"
+            style={{ animationDelay: "150ms" }}
+          >
+            <p className="text-xs text-muted-foreground mb-1">
+              Latest IPFS Report
+            </p>
+            <a
+              href={`https://gateway.pinata.cloud/ipfs/${ipfsHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline font-mono"
+            >
+              {ipfsHash.length > 20
+                ? `${ipfsHash.slice(0, 10)}…${ipfsHash.slice(-10)}`
+                : ipfsHash}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        )}
 
         {/* Risk Breakdown */}
         <div

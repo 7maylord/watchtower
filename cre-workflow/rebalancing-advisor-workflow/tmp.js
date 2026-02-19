@@ -17883,97 +17883,131 @@ Be specific with numerical recommendations and provide clear reasoning.`;
   }
 }
 
-class PinataClient {
+class FirebaseClient {
   logger;
   apiKey;
-  apiSecret;
-  baseUrl;
-  constructor(runtime2, apiKey, apiSecret) {
+  projectId;
+  constructor(runtime2, apiKey, projectId) {
     this.logger = new StructuredLogger(runtime2);
     this.apiKey = apiKey;
-    this.apiSecret = apiSecret;
-    this.baseUrl = "https://api.pinata.cloud";
+    this.projectId = projectId;
   }
-  uploadJSON(runtime2, data, metadata) {
-    this.logger.info("Pinata: Uploading to IPFS", {
-      name: metadata?.name || "unnamed"
+  writeDocument(runtime2, collection, data, documentId) {
+    this.logger.info("Firebase: Writing to Firestore", {
+      collection,
+      documentId: documentId || "auto"
     });
-    try {
-      const pinataMetadata = {};
-      if (metadata?.name) {
-        pinataMetadata.name = metadata.name;
-      }
-      if (metadata?.keyvalues) {
-        const safeKeyvalues = {};
-        for (const [key, val] of Object.entries(metadata.keyvalues)) {
-          if (val != null) {
-            safeKeyvalues[key] = String(val);
-          }
-        }
-        pinataMetadata.keyvalues = safeKeyvalues;
-      }
-      const safeData = JSON.parse(JSON.stringify(data));
-      const requestBody = {
-        pinataContent: safeData,
-        pinataMetadata
-      };
-      const response = makeHttpPost(runtime2, `${this.baseUrl}/pinning/pinJSONToIPFS`, requestBody, {
-        pinata_api_key: this.apiKey,
-        pinata_secret_api_key: this.apiSecret
-      });
-      const result = {
-        ipfsHash: response.IpfsHash,
-        pinataUrl: `https://gateway.pinata.cloud/ipfs/${response.IpfsHash}`,
-        timestamp: Date.now()
-      };
-      this.logger.success("Pinata: Upload successful", {
-        ipfsHash: result.ipfsHash
-      });
-      return result;
-    } catch (error) {
-      this.logger.error("Pinata: Upload failed", error);
-      throw error;
-    }
+    const httpClient = new cre.capabilities.HTTPClient;
+    const tokenResult = httpClient.sendRequest(runtime2, this.buildAuthRequest(), consensusIdenticalAggregation())(runtime2.config).result();
+    const fields2 = this.convertToFirestoreFields(data);
+    const docIdParam = documentId ? `?documentId=${documentId}` : "";
+    const writeResult = httpClient.sendRequest(runtime2, this.buildWriteRequest(tokenResult.idToken, collection, fields2, docIdParam), consensusIdenticalAggregation())(runtime2.config).result();
+    const result = {
+      documentId: documentId || writeResult.name?.split("/").pop() || "unknown",
+      documentPath: writeResult.name || "",
+      timestamp: Date.now()
+    };
+    this.logger.success("Firebase: Document written", {
+      documentId: result.documentId,
+      collection
+    });
+    return result;
   }
   uploadRiskReport(runtime2, report2) {
-    const result = this.uploadJSON(runtime2, report2, {
-      name: `risk-report-${Date.now()}`,
-      keyvalues: {
-        type: "risk_assessment",
-        score: report2.riskScore.toString()
-      }
-    });
-    return result.ipfsHash;
+    const docId = `risk-report-${Date.now()}`;
+    const result = this.writeDocument(runtime2, "risk-reports", {
+      ...report2,
+      recommendations: report2.recommendations.join(" | "),
+      type: "risk_assessment"
+    }, docId);
+    return result.documentId;
   }
   uploadComplianceReport(runtime2, report2) {
-    const result = this.uploadJSON(runtime2, report2, {
-      name: `compliance-report-${Date.now()}`,
-      keyvalues: {
-        type: "compliance_screening",
-        status: report2.status
-      }
-    });
-    return result.ipfsHash;
+    const docId = `compliance-report-${Date.now()}`;
+    const result = this.writeDocument(runtime2, "compliance-reports", {
+      ...report2,
+      type: "compliance_screening"
+    }, docId);
+    return result.documentId;
   }
   uploadReserveReport(runtime2, report2) {
-    const result = this.uploadJSON(runtime2, report2, {
-      name: `reserve-report-${Date.now()}`,
-      keyvalues: {
-        type: "proof_of_reserve",
-        ratio: report2.reserveRatio
-      }
-    });
-    return result.ipfsHash;
+    const docId = `reserve-report-${Date.now()}`;
+    const result = this.writeDocument(runtime2, "reserve-reports", {
+      ...report2,
+      type: "proof_of_reserve"
+    }, docId);
+    return result.documentId;
   }
   uploadRebalancingReport(runtime2, report2) {
-    const result = this.uploadJSON(runtime2, report2, {
-      name: `rebalancing-report-${Date.now()}`,
-      keyvalues: {
-        type: "rebalancing_advisory",
-        score: report2.riskScore.toString()
+    const docId = `rebalancing-report-${Date.now()}`;
+    const result = this.writeDocument(runtime2, "rebalancing-reports", {
+      ...report2,
+      recommendations: report2.recommendations.join(" | "),
+      type: "rebalancing_advisory"
+    }, docId);
+    return result.documentId;
+  }
+  convertToFirestoreFields(data) {
+    const fields2 = {};
+    for (const [key, value2] of Object.entries(data)) {
+      if (typeof value2 === "string") {
+        fields2[key] = { stringValue: value2 };
+      } else if (typeof value2 === "number") {
+        if (Number.isInteger(value2)) {
+          fields2[key] = { integerValue: value2 };
+        } else {
+          fields2[key] = { doubleValue: value2 };
+        }
+      } else if (typeof value2 === "boolean") {
+        fields2[key] = { booleanValue: value2 };
+      } else {
+        fields2[key] = { stringValue: JSON.stringify(value2) };
       }
-    });
-    return result.ipfsHash;
+    }
+    return fields2;
+  }
+  buildAuthRequest() {
+    const apiKey = this.apiKey;
+    return (sendRequester, _config) => {
+      const dataToSend = { returnSecureToken: true };
+      const bodyBytes = new TextEncoder().encode(JSON.stringify(dataToSend));
+      const body = Buffer.from(bodyBytes).toString("base64");
+      const req = {
+        url: `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+        method: "POST",
+        body,
+        headers: { "Content-Type": "application/json" }
+      };
+      const resp = sendRequester.sendRequest(req).result();
+      if (!ok(resp)) {
+        const errText = new TextDecoder().decode(resp.body);
+        throw new Error(`Firebase auth failed (${resp.statusCode}): ${errText}`);
+      }
+      return JSON.parse(new TextDecoder().decode(resp.body));
+    };
+  }
+  buildWriteRequest(idToken, collection, fields2, docIdParam) {
+    const projectId = this.projectId;
+    return (sendRequester, _config) => {
+      const dataToSend = { fields: fields2 };
+      const bodyBytes = new TextEncoder().encode(JSON.stringify(dataToSend));
+      const body = Buffer.from(bodyBytes).toString("base64");
+      const req = {
+        url: `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docIdParam}`,
+        method: "POST",
+        body,
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json"
+        }
+      };
+      const resp = sendRequester.sendRequest(req).result();
+      if (!ok(resp)) {
+        const errText = new TextDecoder().decode(resp.body);
+        throw new Error(`Firestore write failed (${resp.statusCode}): ${errText}`);
+      }
+      return JSON.parse(new TextDecoder().decode(resp.body));
+    };
   }
 }
 var configSchema = exports_external.object({
@@ -17987,8 +18021,8 @@ var configSchema = exports_external.object({
     minPortfolioSize: exports_external.number()
   }),
   geminiApiKey: exports_external.string(),
-  pinataApiKey: exports_external.string(),
-  pinataApiSecret: exports_external.string()
+  firebaseApiKey: exports_external.string(),
+  firebaseProjectId: exports_external.string()
 });
 var getPortfolioData = (runtime2) => {
   const network248 = getNetwork({
@@ -18152,7 +18186,7 @@ var runRebalancingAdvisoryWorkflow = async (runtime2) => {
       recommendation: advice.recommendation,
       confidence: advice.confidence
     });
-    const pinata = new PinataClient(runtime2, runtime2.config.pinataApiKey, runtime2.config.pinataApiSecret);
+    const firebase = new FirebaseClient(runtime2, runtime2.config.firebaseApiKey, runtime2.config.firebaseProjectId);
     const uploadData = {
       timestamp: Date.now(),
       riskScore: riskScore || 0,
@@ -18162,9 +18196,9 @@ var runRebalancingAdvisoryWorkflow = async (runtime2) => {
     };
     let ipfsHash = "N/A";
     try {
-      ipfsHash = pinata.uploadRebalancingReport(runtime2, uploadData);
+      ipfsHash = firebase.uploadRebalancingReport(runtime2, uploadData);
     } catch (uploadError) {
-      logger.warn("Pinata upload failed, continuing without IPFS", {
+      logger.warn("Firebase upload failed, continuing without storage", {
         error: uploadError.message
       });
     }

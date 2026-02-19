@@ -2,7 +2,6 @@
 # Documentation - exclude all .md files except root README.md
 *.md
 #!/README.md
-hardhat-deploy/
 
 # Environment variables
 .env

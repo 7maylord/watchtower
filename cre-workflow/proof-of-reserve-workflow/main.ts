@@ -24,7 +24,7 @@ import {
   FundVaultAbi,
   IERC20,
 } from "../contracts/abi";
-import { PinataClient } from "./pinata";
+import { FirebaseClient } from "./firebase";
 import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
@@ -35,8 +35,8 @@ const configSchema = z.object({
   mockUSDCAddress: z.string(),
   chainSelectorName: z.string(),
   gasLimit: z.string(),
-  pinataApiKey: z.string(),
-  pinataApiSecret: z.string(),
+  firebaseApiKey: z.string(),
+  firebaseProjectId: z.string(),
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -304,14 +304,14 @@ const runProofOfReserveWorkflow = async (
         return "No update needed";
       }
 
-      // Step 6: Upload PoR report to IPFS
-      const pinata = new PinataClient(
+      // Step 6: Upload PoR report to Firebase
+      const firebase = new FirebaseClient(
         runtime,
-        runtime.config.pinataApiKey,
-        runtime.config.pinataApiSecret,
+        runtime.config.firebaseApiKey,
+        runtime.config.firebaseProjectId,
       );
 
-      const ipfsHash = pinata.uploadReserveReport(runtime, {
+      const ipfsHash = firebase.uploadReserveReport(runtime, {
         timestamp: Date.now(),
         totalReserves: `$${reservesInUSDC.toLocaleString()} USDC`,
         actualBalance: `$${balanceInUSDC.toLocaleString()} USDC`,
@@ -319,7 +319,7 @@ const runProofOfReserveWorkflow = async (
         attestation: "On-chain USDC balance verified",
       });
 
-      logger.success("PoR report uploaded to IPFS", { ipfsHash });
+      logger.success("PoR report uploaded to Firebase", { ipfsHash });
 
       // Step 7: Update ProofOfReserveOracle
       const txHash = updateReserves(runtime, totalReserves, ipfsHash);

@@ -7,40 +7,45 @@ import {
   ShieldCheck,
   ShieldAlert,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatusBadge from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { complianceHistory } from "@/lib/mock-data";
+import { useComplianceStatus, formatTimeAgo } from "@/hooks/useContractData";
+import { type Address, isAddress } from "viem";
 
 export default function Compliance() {
   const [searchAddr, setSearchAddr] = useState("");
-  const [result, setResult] = useState<null | {
-    address: string;
-    sanctioned: boolean;
-    riskScore: number;
-    confidence: number;
-  }>(null);
+  const [queryAddr, setQueryAddr] = useState<Address | undefined>(undefined);
+  const [addrError, setAddrError] = useState("");
+
+  const {
+    hasKYC,
+    sanctioned,
+    lastUpdated,
+    isLoading: complianceLoading,
+    isError,
+  } = useComplianceStatus(queryAddr);
 
   const handleScreen = () => {
     if (!searchAddr) return;
-    const isFlagged = Math.random() > 0.8;
-    setResult({
-      address: searchAddr,
-      sanctioned: isFlagged,
-      riskScore: isFlagged
-        ? 78 + Math.floor(Math.random() * 15)
-        : Math.floor(Math.random() * 20),
-      confidence: +(0.85 + Math.random() * 0.14).toFixed(2),
-    });
+    if (!isAddress(searchAddr)) {
+      setAddrError("Invalid Ethereum address");
+      setQueryAddr(undefined);
+      return;
+    }
+    setAddrError("");
+    setQueryAddr(searchAddr as Address);
   };
 
-  const approved = complianceHistory.filter(
-    (c) => c.status === "approved",
-  ).length;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const total = complianceHistory.length;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleScreen();
+  };
+
+  const isLive = queryAddr !== undefined && hasKYC !== undefined;
 
   return (
     <DashboardLayout>
@@ -86,53 +91,110 @@ export default function Compliance() {
         >
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Screen Address
+            {isLive && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success border border-success/20 normal-case">
+                ● Live on-chain query
+              </span>
+            )}
           </h3>
           <div className="flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchAddr}
-                onChange={(e) => setSearchAddr(e.target.value)}
+                onChange={(e) => {
+                  setSearchAddr(e.target.value);
+                  setAddrError("");
+                }}
+                onKeyDown={handleKeyDown}
                 placeholder="Enter ETH address (0x...)"
                 className="pl-10 bg-muted/50 border-border"
               />
             </div>
             <Button
               onClick={handleScreen}
-              className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground border-0"
+              disabled={complianceLoading}
+              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground border-0"
             >
+              {complianceLoading && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
               Screen
             </Button>
           </div>
 
-          {result && (
-            <div className="mt-4 rounded-lg border border-border bg-muted/20 p-4 animate-fade-in">
-              <div className="grid gap-3 sm:grid-cols-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Address</p>
-                  <p className="font-mono text-sm text-foreground truncate">
-                    {result.address}
-                  </p>
+          {addrError && (
+            <p className="mt-2 text-sm text-destructive">{addrError}</p>
+          )}
+
+          {queryAddr &&
+            !complianceLoading &&
+            !isError &&
+            hasKYC !== undefined && (
+              <div className="mt-4 rounded-lg border border-border bg-muted/20 p-4 animate-fade-in">
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Address</p>
+                    <p className="font-mono text-sm text-foreground truncate">
+                      {queryAddr}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">KYC Status</p>
+                    <StatusBadge status={hasKYC ? "approved" : "pending"} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Sanctions Status
+                    </p>
+                    <StatusBadge status={sanctioned ? "flagged" : "approved"} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Last Updated
+                    </p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {lastUpdated && lastUpdated > 0
+                        ? formatTimeAgo(lastUpdated)
+                        : "Never checked"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <StatusBadge
-                    status={result.sanctioned ? "flagged" : "approved"}
-                  />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Risk Score</p>
-                  <p className="text-lg font-bold text-foreground">
-                    {result.riskScore}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Confidence</p>
-                  <p className="text-lg font-bold text-foreground">
-                    {(result.confidence * 100).toFixed(0)}%
-                  </p>
+
+                {/* Overall status summary */}
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  {hasKYC && !sanctioned ? (
+                    <div className="flex items-center gap-2 text-success">
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        ✅ Address is compliant — KYC passed, not sanctioned
+                      </span>
+                    </div>
+                  ) : sanctioned ? (
+                    <div className="flex items-center gap-2 text-destructive">
+                      <ShieldAlert className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        🚫 Address is SANCTIONED — all vault operations blocked
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-warning">
+                      <ShieldAlert className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        ⚠️ Address has not completed KYC
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
+            )}
+
+          {isError && queryAddr && (
+            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+              <p className="text-sm text-destructive">
+                Failed to read from ComplianceRegistry. Make sure your wallet is
+                connected to Sepolia.
+              </p>
             </div>
           )}
         </div>
