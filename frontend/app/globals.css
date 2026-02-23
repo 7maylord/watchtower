@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  /* Default background/foreground */
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Default background/foreground — dark by default */
+  --background: #0a0a0a;
+  --foreground: #ededed;
 
   /* Lovable Theme Variables */
   --card: 224 71% 6%;

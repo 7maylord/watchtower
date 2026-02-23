@@ -10,6 +10,29 @@ import "../interfaces/IComplianceRegistry.sol";
 import "../interfaces/IRiskOracle.sol";
 import "../interfaces/IProofOfReserveOracle.sol";
 
+// Interfaces for mock protocols
+interface IMockAavePool {
+    function supply(
+        address asset,
+        uint256 amount,
+        address onBehalfOf,
+        uint16 referralCode
+    ) external;
+    function withdraw(
+        address asset,
+        uint256 amount,
+        address to
+    ) external returns (uint256);
+}
+
+interface IMockCompoundReserve {
+    function supply(address asset, uint256 amount) external;
+    function withdraw(address asset, uint256 amount) external;
+    function balanceOfUnderlying(
+        address account
+    ) external view returns (uint256);
+}
+
 /**
  * @title FundVault
  * @notice Main tokenized fund vault with integrated compliance and risk monitoring
@@ -25,6 +48,12 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
     IComplianceRegistry private immutable _complianceRegistry;
     IRiskOracle private immutable _riskOracle;
     IProofOfReserveOracle private immutable _porOracle;
+
+    // Mock protocols
+    IMockAavePool public aavePool;
+    IMockCompoundReserve public compoundReserve;
+    IERC20 public aToken;
+    IERC20 public cToken;
 
     // State
     uint256 private _totalAssetsValue;
@@ -69,18 +98,42 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
         _grantRole(FUND_MANAGER_ROLE, fundManager);
     }
 
+    function setMockProtocols(
+        address _aavePool,
+        address _aToken,
+        address _compoundReserve,
+        address _cToken
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        aavePool = IMockAavePool(_aavePool);
+        aToken = IERC20(_aToken); // MockAavePool is the aToken in our setup
+        compoundReserve = IMockCompoundReserve(_compoundReserve);
+        cToken = IERC20(_cToken); // MockCompoundReserve is the cToken
+
+        // Approve protocols to spend underlying
+        _underlyingAsset.approve(_aavePool, type(uint256).max);
+        _underlyingAsset.approve(_compoundReserve, type(uint256).max);
+    }
+
     function asset() external view override returns (address) {
         return address(_underlyingAsset);
     }
 
-    function totalAssets() external view override returns (uint256) {
-        return _totalAssetsValue;
+    function totalAssets() public view override returns (uint256) {
+        uint256 idleBalance = _underlyingAsset.balanceOf(address(this));
+        uint256 aaveBalance = address(aToken) != address(0)
+            ? aToken.balanceOf(address(this))
+            : 0;
+        uint256 compoundBalance = address(compoundReserve) != address(0)
+            ? compoundReserve.balanceOfUnderlying(address(this))
+            : 0;
+
+        return idleBalance + aaveBalance + compoundBalance;
     }
 
     function sharePrice() public view returns (uint256 price) {
         uint256 supply = totalSupply();
         if (supply == 0) return 1e18; // 1:1 ratio initially
-        return (_totalAssetsValue * 1e18) / supply;
+        return (totalAssets() * 1e18) / supply;
     }
 
     function deposit(
@@ -107,7 +160,7 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
         if (supply == 0) {
             shares = amount; // 1:1 for first deposit
         } else {
-            shares = (amount * supply) / _totalAssetsValue;
+            shares = (amount * supply) / totalAssets();
         }
 
         // Transfer underlying asset from user
@@ -115,9 +168,6 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
             _underlyingAsset.transferFrom(msg.sender, address(this), amount),
             "Transfer failed"
         );
-
-        // Update total assets
-        _totalAssetsValue += amount;
 
         // Mint shares
         _mint(msg.sender, shares);
@@ -134,13 +184,34 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
         }
 
         // Calculate underlying amount
-        amount = (shares * _totalAssetsValue) / totalSupply();
+        amount = (shares * totalAssets()) / totalSupply();
+
+        // Check if we have enough idle balance, otherwise pull from protocols
+        uint256 idleBalance = _underlyingAsset.balanceOf(address(this));
+        if (idleBalance < amount) {
+            uint256 shortfall = amount - idleBalance;
+            // Try to pull from Aave first
+            if (
+                address(aToken) != address(0) &&
+                aToken.balanceOf(address(this)) >= shortfall
+            ) {
+                aavePool.withdraw(
+                    address(_underlyingAsset),
+                    shortfall,
+                    address(this)
+                );
+            } else if (
+                address(compoundReserve) != address(0) &&
+                compoundReserve.balanceOfUnderlying(address(this)) >= shortfall
+            ) {
+                compoundReserve.withdraw(address(_underlyingAsset), shortfall);
+            } else {
+                revert("Insufficient liquidity across protocols");
+            }
+        }
 
         // Burn shares
         _burn(msg.sender, shares);
-
-        // Update total assets
-        _totalAssetsValue -= amount;
 
         // Transfer underlying asset to user
         require(
@@ -235,7 +306,11 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
      * 5. All steps are consensus-verified by Chainlink DON
      */
     function rebalance(
-        string calldata strategy
+        string calldata strategy,
+        uint256 aaveSupplyAmount,
+        uint256 aaveWithdrawAmount,
+        uint256 compSupplyAmount,
+        uint256 compWithdrawAmount
     ) external onlyRole(FUND_MANAGER_ROLE) whenNotPaused {
         // Risk check before rebalancing
         (uint8 riskScore, , ) = _riskOracle.getCurrentRiskScore();
@@ -243,13 +318,32 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
             revert RiskTooHigh();
         }
 
-        // TODO (Post-hackathon): Implement actual rebalancing logic here
-        // For now, CRE workflow handles execution off-chain
-        // This function serves as:
-        // 1. Access control checkpoint (only fund manager)
-        // 2. Risk validation gate (block if risk too high)
-        // 3. Strategy documentation (IPFS hash logged in event)
-        // 4. Audit trail for compliance
+        // Execute rebalancing actions
+        if (aaveWithdrawAmount > 0) {
+            aavePool.withdraw(
+                address(_underlyingAsset),
+                aaveWithdrawAmount,
+                address(this)
+            );
+        }
+        if (compWithdrawAmount > 0) {
+            compoundReserve.withdraw(
+                address(_underlyingAsset),
+                compWithdrawAmount
+            );
+        }
+
+        if (aaveSupplyAmount > 0) {
+            aavePool.supply(
+                address(_underlyingAsset),
+                aaveSupplyAmount,
+                address(this),
+                0
+            );
+        }
+        if (compSupplyAmount > 0) {
+            compoundReserve.supply(address(_underlyingAsset), compSupplyAmount);
+        }
 
         emit Rebalanced(strategy, block.timestamp);
     }
@@ -288,11 +382,5 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
 
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
-    }
-
-    function updateTotalAssets(
-        uint256 newValue
-    ) external onlyRole(CRE_WORKFLOW_ROLE) {
-        _totalAssetsValue = newValue;
     }
 }

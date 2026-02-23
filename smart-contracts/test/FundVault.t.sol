@@ -7,6 +7,8 @@ import "../src/core/ComplianceRegistry.sol";
 import "../src/core/RiskOracle.sol";
 import "../src/core/ProofOfReserveOracle.sol";
 import "../src/mock/MockUSDC.sol";
+import "../src/mock/MockAavePool.sol";
+import "../src/mock/MockCompoundReserve.sol";
 
 contract FundVaultTest is Test {
     FundVault public vault;
@@ -14,6 +16,8 @@ contract FundVaultTest is Test {
     RiskOracle public riskOracle;
     ProofOfReserveOracle public porOracle;
     MockUSDC public usdc;
+    MockAavePool public aavePool;
+    MockCompoundReserve public compReserve;
 
     address public admin = address(0x1);
     address public complianceOfficer = address(0x2);
@@ -29,10 +33,14 @@ contract FundVaultTest is Test {
 
     function setUp() public {
         // Deploy oracle contracts
+        vm.startPrank(admin);
         compliance = new ComplianceRegistry(admin, complianceOfficer);
         riskOracle = new RiskOracle(admin);
         porOracle = new ProofOfReserveOracle(admin);
         usdc = new MockUSDC();
+        aavePool = new MockAavePool(address(usdc), admin);
+        compReserve = new MockCompoundReserve(address(usdc), admin);
+        vm.stopPrank();
 
         // Deploy FundVault
         vault = new FundVault(
@@ -44,6 +52,15 @@ contract FundVaultTest is Test {
             address(porOracle),
             admin,
             fundManager
+        );
+
+        // Setup mock protocols
+        vm.prank(admin);
+        vault.setMockProtocols(
+            address(aavePool),
+            address(aavePool),
+            address(compReserve),
+            address(compReserve)
         );
 
         // Grant CRE workflow roles
@@ -62,8 +79,10 @@ contract FundVaultTest is Test {
         porOracle.updateReserves(0, 0, 0); // No reserves initially
 
         // Give investors USDC
+        vm.startPrank(admin);
         usdc.transfer(investor1, 10000e6);
         usdc.transfer(investor2, 10000e6);
+        vm.stopPrank();
     }
 
     function test_Constructor() public view {
@@ -121,9 +140,11 @@ contract FundVaultTest is Test {
         vault.deposit(1000e6);
         vm.stopPrank();
 
-        // Second deposit (after some value increase)
-        vm.prank(creWorkflow);
-        vault.updateTotalAssets(2000e6); // Fund doubled in value
+        // Second deposit (after some value increase in Aave)
+        vm.startPrank(admin);
+        usdc.mint(address(aavePool), 1000e6);
+        aavePool.mint(address(vault), 1000e6); // artificially inflate aave to mock yield
+        vm.stopPrank();
 
         vm.startPrank(investor2);
         usdc.approve(address(vault), 1000e6);
@@ -231,9 +252,9 @@ contract FundVaultTest is Test {
         vault.deposit(1000e6);
         vm.stopPrank();
 
-        // Fund doubles in value
-        vm.prank(creWorkflow);
-        vault.updateTotalAssets(2000e6);
+        // Fund doubles in value via mock yield injection
+        vm.prank(admin);
+        aavePool.mint(address(vault), 1000e6);
 
         uint256 initialBalance = usdc.balanceOf(investor1);
 
@@ -348,7 +369,7 @@ contract FundVaultTest is Test {
         emit Rebalanced("QmStrategy123", block.timestamp);
 
         vm.prank(fundManager);
-        vault.rebalance("QmStrategy123");
+        vault.rebalance("QmStrategy123", 0, 0, 0, 0);
     }
 
     function test_RevertRebalance_RiskTooHigh() public {
@@ -357,13 +378,13 @@ contract FundVaultTest is Test {
 
         vm.prank(fundManager);
         vm.expectRevert(IFundVault.RiskTooHigh.selector);
-        vault.rebalance("QmStrategy");
+        vault.rebalance("QmStrategy", 0, 0, 0, 0);
     }
 
     function test_RevertRebalance_Unauthorized() public {
         vm.prank(investor1);
         vm.expectRevert();
-        vault.rebalance("QmStrategy");
+        vault.rebalance("QmStrategy", 0, 0, 0, 0);
     }
 
     function test_RevertRebalance_WhenPaused() public {
@@ -372,7 +393,7 @@ contract FundVaultTest is Test {
 
         vm.prank(fundManager);
         vm.expectRevert();
-        vault.rebalance("QmStrategy");
+        vault.rebalance("QmStrategy", 0, 0, 0, 0);
     }
 
     function test_EmergencyWithdraw() public {
@@ -418,19 +439,6 @@ contract FundVaultTest is Test {
         vault.emergencyWithdraw(investor1, 100e6);
     }
 
-    function test_UpdateTotalAssets() public {
-        vm.prank(creWorkflow);
-        vault.updateTotalAssets(5000e6);
-
-        assertEq(vault.totalAssets(), 5000e6);
-    }
-
-    function test_RevertUpdateTotalAssets_Unauthorized() public {
-        vm.prank(investor1);
-        vm.expectRevert();
-        vault.updateTotalAssets(5000e6);
-    }
-
     function test_SharePrice_AfterDeposit() public {
         vm.prank(complianceOfficer);
         compliance.updateCompliance(investor1, true, false);
@@ -458,9 +466,9 @@ contract FundVaultTest is Test {
         vault.deposit(1000e6);
         vm.stopPrank();
 
-        // Double the value
-        vm.prank(creWorkflow);
-        vault.updateTotalAssets(2000e6);
+        // Double the value via mock yield
+        vm.prank(admin);
+        aavePool.mint(address(vault), 1000e6);
 
         assertEq(vault.sharePrice(), 2e18); // $2 per share
     }
@@ -484,9 +492,11 @@ contract FundVaultTest is Test {
         vault.deposit(2000e6);
         vm.stopPrank();
 
-        // 4. Fund performs well
-        vm.prank(creWorkflow);
-        vault.updateTotalAssets(2400e6); // 20% gain
+        // 4. Fund performs well (mock yield)
+        vm.startPrank(admin);
+        usdc.mint(address(aavePool), 400e6);
+        aavePool.mint(address(vault), 400e6); // 20% gain
+        vm.stopPrank();
 
         // 5. Second investor deposits
         vm.startPrank(investor2);
@@ -496,13 +506,9 @@ contract FundVaultTest is Test {
 
         // 6. Rebalance
         vm.prank(fundManager);
-        vault.rebalance("QmRebalanceStrategy");
+        vault.rebalance("QmRebalanceStrategy", 1000e6, 0, 500e6, 0);
 
-        // 7. Update total assets
-        vm.prank(creWorkflow);
-        vault.updateTotalAssets(3800e6);
-
-        // 8. Withdraw
+        // 7. Withdraw
         vm.prank(investor1);
         vault.withdraw(1000e6);
 
