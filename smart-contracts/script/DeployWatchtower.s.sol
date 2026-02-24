@@ -7,6 +7,8 @@ import "../src/core/RiskOracle.sol";
 import "../src/core/ProofOfReserveOracle.sol";
 import "../src/core/FundVault.sol";
 import "../src/mock/MockUSDC.sol";
+import "../src/mock/MockAavePool.sol";
+import "../src/mock/MockCompoundReserve.sol";
 
 /**
  * @title DeployWatchtower
@@ -22,6 +24,8 @@ contract DeployWatchtower is Script {
     RiskOracle public riskOracle;
     ProofOfReserveOracle public porOracle;
     MockUSDC public usdc;
+    MockAavePool public aavePool;
+    MockCompoundReserve public compReserve;
     FundVault public fundVault;
 
     // Configuration addresses (set via environment variables)
@@ -78,10 +82,21 @@ contract DeployWatchtower is Script {
 
         console.log("");
 
-        // ============ Step 2: Deploy Mock USDC ============
-        console.log("Step 2: Deploying Mock USDC...");
+        // ============ Step 2: Deploy Mock ERC20s and Protocols ============
+        console.log("Step 2: Deploying Mock Assets and Protocols...");
+
         usdc = new MockUSDC();
         console.log("  -> MockUSDC deployed at:", address(usdc));
+
+        aavePool = new MockAavePool(address(usdc), admin);
+        console.log("  -> MockAavePool deployed at:", address(aavePool));
+
+        compReserve = new MockCompoundReserve(address(usdc), admin);
+        console.log(
+            "  -> MockCompoundReserve deployed at:",
+            address(compReserve)
+        );
+
         console.log("");
 
         // ============ Step 3: Deploy FundVault ============
@@ -97,6 +112,14 @@ contract DeployWatchtower is Script {
             fundManager
         );
         console.log("  -> FundVault deployed at:", address(fundVault));
+
+        fundVault.setMockProtocols(
+            address(aavePool),
+            address(aavePool), // using pool address as aToken mock
+            address(compReserve),
+            address(compReserve) // using reserve address as cToken mock
+        );
+        console.log("  -> Mock Protocols wired to FundVault");
         console.log("");
 
         // ============ Step 4: Grant CRE Workflow Roles ============
@@ -164,6 +187,10 @@ contract DeployWatchtower is Script {
         console.log("");
         console.log("Asset Contracts:");
         console.log("  MockUSDC:", address(usdc));
+        console.log("");
+        console.log("Mock Protocols:");
+        console.log("  MockAavePool:", address(aavePool));
+        console.log("  MockCompoundReserve:", address(compReserve));
         console.log("");
         console.log("Core Contracts:");
         console.log("  FundVault:", address(fundVault));

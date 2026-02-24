@@ -2,6 +2,11 @@
 
 import { Play, ExternalLink, Loader2 } from "lucide-react";
 import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useAccount,
+} from "wagmi";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -16,6 +21,7 @@ import RiskGauge from "@/components/RiskGauge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { riskBreakdown, healthAssessments } from "@/lib/mock-data";
+import { CONTRACTS, fundVaultAbi } from "@/lib/contracts";
 import {
   useRiskScore,
   useFundVaultStats,
@@ -50,6 +56,23 @@ export default function PortfolioHealth() {
   const displayTotalAssets =
     totalSupply && sharePrice ? (totalSupply * sharePrice) / 1e6 : 2.4;
 
+  const { isConnected } = useAccount();
+  const {
+    writeContract,
+    data: txHash,
+    isPending: isWriting,
+  } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isTxSuccess } =
+    useWaitForTransactionReceipt({ hash: txHash });
+
+  const handleRunAnalysis = () => {
+    writeContract({
+      address: CONTRACTS.fundVault,
+      abi: fundVaultAbi,
+      functionName: "requestAnalysis",
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -67,11 +90,45 @@ export default function PortfolioHealth() {
               )}
             </p>
           </div>
-          <Button className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground border-0">
-            <Play className="h-4 w-4" />
-            Run Analysis
+          <Button
+            onClick={handleRunAnalysis}
+            disabled={!isConnected || isWriting || isConfirming}
+            className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground border-0"
+          >
+            {isWriting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isConfirming ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+            {isWriting
+              ? "Confirm in wallet…"
+              : isConfirming
+                ? "Confirming…"
+                : "Run Analysis"}
           </Button>
         </div>
+
+        {isTxSuccess && txHash && (
+          <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 p-4 animate-fade-in">
+            <span className="text-sm text-success font-medium">
+              ✅ AnalysisRequested emitted!
+            </span>
+            <a
+              href={`https://sepolia.etherscan.io/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
+            >
+              {txHash.slice(0, 10)}…{txHash.slice(-8)}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+            <span className="text-xs text-muted-foreground">
+              Copy tx hash → cre local simulate
+            </span>
+          </div>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Gauge */}

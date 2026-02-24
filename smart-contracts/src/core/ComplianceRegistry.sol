@@ -132,4 +132,13 @@ contract ComplianceRegistry is IComplianceRegistry, AccessControl, Pausable {
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
+
+    event ComplianceScreeningRequested(
+        address indexed requester,
+        uint256 timestamp
+    );
+
+    function requestComplianceScreening() external {
+        emit ComplianceScreeningRequested(msg.sender, block.timestamp);
+    }
 }

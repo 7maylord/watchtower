@@ -364,12 +364,41 @@ contract FundVaultTest is Test {
         vm.stopPrank();
     }
 
-    function test_Rebalance() public {
+    function test_Rebalance_FundManager() public {
         vm.expectEmit(false, false, false, true);
         emit Rebalanced("QmStrategy123", block.timestamp);
 
         vm.prank(fundManager);
         vault.rebalance("QmStrategy123", 0, 0, 0, 0);
+    }
+
+    function test_Rebalance_CRE_WhenRiskAboveThreshold() public {
+        // Set risk above the default threshold (50)
+        vm.prank(creWorkflow);
+        riskOracle.updateRiskScore(60, "QmElevatedRisk");
+
+        vm.prank(creWorkflow);
+        vault.rebalance("QmCREStrategy", 0, 0, 0, 0);
+    }
+
+    function test_RevertRebalance_CRE_WhenRiskBelowThreshold() public {
+        // Risk is at default (25), below threshold (50)
+        vm.prank(creWorkflow);
+        vm.expectRevert();
+        vault.rebalance("QmCREStrategy", 0, 0, 0, 0);
+    }
+
+    function test_SetRebalanceRiskThreshold() public {
+        vm.prank(fundManager);
+        vault.setRebalanceRiskThreshold(30);
+        assertEq(vault.rebalanceRiskThreshold(), 30);
+
+        // Now CRE can rebalance at risk 35 (above new threshold of 30)
+        vm.prank(creWorkflow);
+        riskOracle.updateRiskScore(35, "QmModerateRisk");
+
+        vm.prank(creWorkflow);
+        vault.rebalance("QmCREStrategy", 0, 0, 0, 0);
     }
 
     function test_RevertRebalance_RiskTooHigh() public {
@@ -504,7 +533,7 @@ contract FundVaultTest is Test {
         vault.deposit(1200e6);
         vm.stopPrank();
 
-        // 6. Rebalance
+        // 6. Rebalance (fund manager can always rebalance)
         vm.prank(fundManager);
         vault.rebalance("QmRebalanceStrategy", 1000e6, 0, 500e6, 0);
 

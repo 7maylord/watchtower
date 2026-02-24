@@ -15,7 +15,23 @@ import {
 } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatusBadge from "@/components/StatusBadge";
-import { portfolioAllocation, rebalancingHistory } from "@/lib/mock-data";
+import {
+  portfolioAllocation as mockAllocation,
+  rebalancingHistory,
+} from "@/lib/mock-data";
+import {
+  usePortfolioAllocation,
+  useTotalAssets,
+  useRiskScore,
+} from "@/hooks/useContractData";
+import { CONTRACTS, fundVaultAbi } from "@/lib/contracts";
+import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useAccount,
+} from "wagmi";
+import { Loader2, ExternalLink, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const scatterData = [
   { risk: 15, return: 4.2, name: "Stablecoins" },
@@ -33,17 +49,87 @@ const suggestedActions = [
 ];
 
 export default function Rebalancing() {
+  const { allocation, isLoading: allocLoading } = usePortfolioAllocation();
+  const { totalAssets } = useTotalAssets();
+  useRiskScore();
+
+  const displayAllocation = allocation ?? mockAllocation;
+  const isLive = allocation !== undefined;
+  const displayTotal = totalAssets ?? 2.4;
+
+  const { isConnected } = useAccount();
+  const {
+    writeContract,
+    data: txHash,
+    isPending: isWriting,
+  } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isTxSuccess } =
+    useWaitForTransactionReceipt({ hash: txHash });
+
+  const handleRequestRebalance = () => {
+    writeContract({
+      address: CONTRACTS.fundVault,
+      abi: fundVaultAbi,
+      functionName: "requestRebalance",
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Rebalancing Advisor
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            AI-powered portfolio rebalancing recommendations
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Rebalancing Advisor
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              AI-powered portfolio rebalancing recommendations
+              {isLive && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success border border-success/20">
+                  ● Live from Sepolia
+                </span>
+              )}
+            </p>
+          </div>
+          <Button
+            onClick={handleRequestRebalance}
+            disabled={!isConnected || isWriting || isConfirming}
+            className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground border-0"
+          >
+            {isWriting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isConfirming ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {isWriting
+              ? "Confirm in wallet…"
+              : isConfirming
+                ? "Confirming…"
+                : "Request Rebalance"}
+          </Button>
         </div>
+
+        {isTxSuccess && txHash && (
+          <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 p-4 animate-fade-in">
+            <span className="text-sm text-success font-medium">
+              ✅ RebalanceRequested emitted!
+            </span>
+            <a
+              href={`https://sepolia.etherscan.io/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
+            >
+              {txHash.slice(0, 10)}…{txHash.slice(-8)}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+            <span className="text-xs text-muted-foreground">
+              Copy tx hash → cre local simulate
+            </span>
+          </div>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-2">
           {/* Donut */}
@@ -51,46 +137,65 @@ export default function Rebalancing() {
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Current Allocation
             </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={portfolioAllocation}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
-                  dataKey="value"
-                  paddingAngle={4}
-                  stroke="none"
-                >
-                  {portfolioAllocation.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
+            {allocLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={displayAllocation}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={100}
+                      dataKey="value"
+                      paddingAngle={4}
+                      stroke="none"
+                    >
+                      {displayAllocation.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(224, 71%, 6%)",
+                        border: "1px solid hsl(215, 28%, 20%)",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                        color: "hsl(213, 31%, 91%)",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex justify-center gap-6 mt-2">
+                  {displayAllocation.map((a, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: a.color }}
+                      />
+                      <span className="text-muted-foreground">
+                        {a.name} {a.value}%
+                      </span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(224, 71%, 6%)",
-                    border: "1px solid hsl(215, 28%, 20%)",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    color: "hsl(213, 31%, 91%)",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex justify-center gap-6 mt-2">
-              {portfolioAllocation.map((a, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: a.color }}
-                  />
-                  <span className="text-muted-foreground">
-                    {a.name} {a.value}%
-                  </span>
                 </div>
-              ))}
-            </div>
+                {isLive && (
+                  <p className="text-center text-xs text-muted-foreground mt-2">
+                    Total: $
+                    {displayTotal >= 1e6
+                      ? `${(displayTotal / 1e6).toFixed(1)}M`
+                      : displayTotal >= 1e3
+                        ? `${(displayTotal / 1e3).toFixed(0)}K`
+                        : displayTotal.toFixed(2)}{" "}
+                    USDC
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           {/* Recommendation */}
@@ -171,7 +276,10 @@ export default function Rebalancing() {
                 formatter={(
                   value: string | number | (string | number)[],
                   name: string,
-                ) => [typeof value === "number" ? `${value}%` : `${value}`, name || ""]}
+                ) => [
+                  typeof value === "number" ? `${value}%` : `${value}`,
+                  name || "",
+                ]}
               />
               <Scatter data={scatterData} fill="hsl(217, 91%, 60%)" />
             </ScatterChart>

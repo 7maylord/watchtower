@@ -1,8 +1,5 @@
 import {
   bytesToHex,
-  type CronPayload,
-  handler,
-  CronCapability,
   EVMClient,
   encodeCallMsg,
   getNetwork,
@@ -11,12 +8,18 @@ import {
   Runner,
   type Runtime,
   TxStatus,
+  cre,
+  type EVMLog,
 } from "@chainlink/cre-sdk";
 import {
   type Address,
   decodeFunctionResult,
   encodeFunctionData,
   zeroAddress,
+  keccak256,
+  toHex,
+  parseAbi,
+  decodeEventLog,
 } from "viem";
 import { z } from "zod";
 import { FundVaultAbi, RiskOracleAbi } from "../contracts/abi";
@@ -333,20 +336,73 @@ const runRebalancingAdvisoryWorkflow = async (
         });
       }
 
-      logger.success("Advisory report uploaded to IPFS", { ipfsHash });
+      logger.success("Advisory report uploaded", { ipfsHash });
 
+      // Step 5: Execute on-chain rebalance if recommended
       if (advice.shouldRebalance) {
-        logger.warn(
-          "⚠️ ADVISORY: Fund manager should review rebalancing recommendations",
-          {
-            recommendation: advice.recommendation,
-          },
+        logger.info(
+          "⚡ Executing on-chain rebalance via FundVault.rebalance()",
         );
+
+        const network = getNetwork({
+          chainFamily: "evm",
+          chainSelectorName: runtime.config.chainSelectorName,
+          isTestnet: true,
+        });
+
+        if (!network) {
+          throw new Error("Network not found for rebalance execution");
+        }
+
+        const evmClient = new EVMClient(network.chainSelector.selector);
+
+        // Encode the rebalance call
+        // The FundVault contract will check: risk >= rebalanceRiskThreshold
+        // If risk is too low, the tx will revert on-chain — this is the safety gate
+        const rebalanceCallData = encodeFunctionData({
+          abi: FundVaultAbi,
+          functionName: "rebalance",
+          args: [
+            ipfsHash, // strategy IPFS hash
+            BigInt(0), // aaveSupplyAmount (advisory only for now)
+            BigInt(0), // aaveWithdrawAmount
+            BigInt(0), // compSupplyAmount
+            BigInt(0), // compWithdrawAmount
+          ],
+        });
+
+        const reportResponse = runtime
+          .report({
+            encodedPayload: hexToBase64(rebalanceCallData),
+            encoderName: "evm",
+            signingAlgo: "ecdsa",
+            hashingAlgo: "keccak256",
+          })
+          .result();
+
+        const resp = evmClient
+          .writeReport(runtime, {
+            receiver: runtime.config.fundVaultAddress,
+            report: reportResponse,
+            gasConfig: {
+              gasLimit: runtime.config.gasLimit,
+            },
+          })
+          .result();
+
+        if (resp.txStatus !== TxStatus.SUCCESS) {
+          logger.warn("Rebalance tx failed (risk may be below threshold)", {
+            error: resp.errorMessage || resp.txStatus,
+          });
+        } else {
+          const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
+          logger.success("✅ On-chain rebalance executed", { txHash });
+        }
       } else {
         logger.success("✅ No rebalancing needed at this time");
       }
 
-      logger.success("✅ Rebalancing Advisory Analysis Complete", {
+      logger.success("✅ Rebalancing Analysis Complete", {
         ipfsHash,
         recommendation: advice.recommendation,
       });
@@ -358,28 +414,61 @@ const runRebalancingAdvisoryWorkflow = async (
 };
 
 /**
- * Cron trigger handler
+ * ABI for the RebalanceRequested event
  */
-const onCronTrigger = async (
+const eventAbi = parseAbi([
+  "event RebalanceRequested(address indexed requester, uint256 timestamp)",
+]);
+const eventSignature = "RebalanceRequested(address,uint256)";
+
+/**
+ * Log trigger handler — runs when RebalanceRequested is emitted on-chain
+ */
+const onLogTrigger = async (
   runtime: Runtime<Config>,
-  payload: CronPayload,
+  log: EVMLog,
 ): Promise<string> => {
-  runtime.log("⏰ Cron triggered - starting rebalancing analysis");
+  const topics = log.topics.map((t) => bytesToHex(t)) as [
+    `0x${string}`,
+    ...`0x${string}`[],
+  ];
+  const data = bytesToHex(log.data);
+
+  const decodedLog = decodeEventLog({ abi: eventAbi, data, topics });
+  runtime.log(
+    `RebalanceRequested by ${decodedLog.args.requester} at ${decodedLog.args.timestamp}`,
+  );
+
   return runRebalancingAdvisoryWorkflow(runtime);
 };
 
 /**
- * Initialize workflow
+ * Initialize workflow — listens for RebalanceRequested events from FundVault
  */
 const initWorkflow = (config: Config) => {
-  const cronTrigger = new CronCapability();
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: config.chainSelectorName,
+    isTestnet: true,
+  });
+
+  if (!network) {
+    throw new Error(`Network not found: ${config.chainSelectorName}`);
+  }
+
+  const evmClient = new cre.capabilities.EVMClient(
+    network.chainSelector.selector,
+  );
+  const rebalanceEventHash = keccak256(toHex(eventSignature));
 
   return [
-    handler(
-      cronTrigger.trigger({
-        schedule: config.schedule,
+    cre.handler(
+      evmClient.logTrigger({
+        addresses: [config.fundVaultAddress],
+        topics: [{ values: [rebalanceEventHash] }],
+        confidence: "CONFIDENCE_LEVEL_FINALIZED",
       }),
-      onCronTrigger,
+      onLogTrigger,
     ),
   ];
 };

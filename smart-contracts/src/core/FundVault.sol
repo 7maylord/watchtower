@@ -57,6 +57,15 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
 
     // State
     uint256 private _totalAssetsValue;
+    uint8 public rebalanceRiskThreshold = 50; // Default: CRE can rebalance when risk >= 50
+
+    // Custom errors
+    error RiskBelowThreshold(uint8 currentRisk, uint8 threshold);
+
+    // Events
+    event RebalanceRiskThresholdUpdated(uint8 oldThreshold, uint8 newThreshold);
+    event AnalysisRequested(address indexed requester, uint256 timestamp);
+    event RebalanceRequested(address indexed requester, uint256 timestamp);
 
     /**
      * @notice Constructor
@@ -305,17 +314,41 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
      *    - Updates totalAssets via updateTotalAssets()
      * 5. All steps are consensus-verified by Chainlink DON
      */
+    /**
+     * @notice Set the risk threshold above which CRE workflows can trigger rebalancing
+     * @param newThreshold Risk score threshold (0-100)
+     */
+    function setRebalanceRiskThreshold(
+        uint8 newThreshold
+    ) external onlyRole(FUND_MANAGER_ROLE) {
+        uint8 oldThreshold = rebalanceRiskThreshold;
+        rebalanceRiskThreshold = newThreshold;
+        emit RebalanceRiskThresholdUpdated(oldThreshold, newThreshold);
+    }
+
     function rebalance(
         string calldata strategy,
         uint256 aaveSupplyAmount,
         uint256 aaveWithdrawAmount,
         uint256 compSupplyAmount,
         uint256 compWithdrawAmount
-    ) external onlyRole(FUND_MANAGER_ROLE) whenNotPaused {
+    ) external whenNotPaused {
+        // Allow both FUND_MANAGER and CRE_WORKFLOW
+        bool isFundManager = hasRole(FUND_MANAGER_ROLE, msg.sender);
+        bool isCreWorkflow = hasRole(CRE_WORKFLOW_ROLE, msg.sender);
+        require(isFundManager || isCreWorkflow, "Unauthorized");
+
         // Risk check before rebalancing
         (uint8 riskScore, , ) = _riskOracle.getCurrentRiskScore();
         if (riskScore >= 90) {
             revert RiskTooHigh();
+        }
+
+        // CRE can only rebalance when risk exceeds the threshold set by fund manager
+        if (isCreWorkflow && !isFundManager) {
+            if (riskScore < rebalanceRiskThreshold) {
+                revert RiskBelowThreshold(riskScore, rebalanceRiskThreshold);
+            }
         }
 
         // Execute rebalancing actions
@@ -355,6 +388,22 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
         require(to != address(0), "Invalid address");
         require(_underlyingAsset.transfer(to, amount), "Transfer failed");
         emit EmergencyWithdrawal(to, amount);
+    }
+
+    /**
+     * @notice Request a portfolio health analysis from CRE
+     * @dev Permissionless — emits AnalysisRequested for CRE logTrigger
+     */
+    function requestAnalysis() external {
+        emit AnalysisRequested(msg.sender, block.timestamp);
+    }
+
+    /**
+     * @notice Request a rebalancing analysis from CRE
+     * @dev Permissionless — emits RebalanceRequested for CRE logTrigger
+     */
+    function requestRebalance() external {
+        emit RebalanceRequested(msg.sender, block.timestamp);
     }
 
     function _update(

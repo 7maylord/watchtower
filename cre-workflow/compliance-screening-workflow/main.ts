@@ -1,8 +1,5 @@
 import {
   bytesToHex,
-  type CronPayload,
-  handler,
-  CronCapability,
   EVMClient,
   encodeCallMsg,
   getNetwork,
@@ -11,12 +8,18 @@ import {
   Runner,
   type Runtime,
   TxStatus,
+  cre,
+  type EVMLog,
 } from "@chainlink/cre-sdk";
 import {
   type Address,
   decodeFunctionResult,
   encodeFunctionData,
   zeroAddress,
+  keccak256,
+  toHex,
+  parseAbi,
+  decodeEventLog,
 } from "viem";
 import { z } from "zod";
 import { ComplianceRegistryAbi } from "../contracts/abi";
@@ -289,28 +292,61 @@ const runComplianceWorkflow = async (
 };
 
 /**
- * Cron trigger handler
+ * ABI for the ComplianceScreeningRequested event
  */
-const onCronTrigger = async (
+const eventAbi = parseAbi([
+  "event ComplianceScreeningRequested(address indexed requester, uint256 timestamp)",
+]);
+const eventSignature = "ComplianceScreeningRequested(address,uint256)";
+
+/**
+ * Log trigger handler — runs when ComplianceScreeningRequested is emitted
+ */
+const onLogTrigger = async (
   runtime: Runtime<Config>,
-  payload: CronPayload,
+  log: EVMLog,
 ): Promise<string> => {
-  runtime.log("⏰ Cron triggered - starting compliance screening");
+  const topics = log.topics.map((t) => bytesToHex(t)) as [
+    `0x${string}`,
+    ...`0x${string}`[],
+  ];
+  const data = bytesToHex(log.data);
+
+  const decodedLog = decodeEventLog({ abi: eventAbi, data, topics });
+  runtime.log(
+    `ComplianceScreeningRequested by ${decodedLog.args.requester} at ${decodedLog.args.timestamp}`,
+  );
+
   return runComplianceWorkflow(runtime);
 };
 
 /**
- * Initialize workflow
+ * Initialize workflow — listens for ComplianceScreeningRequested events
  */
 const initWorkflow = (config: Config) => {
-  const cronTrigger = new CronCapability();
+  const network = getNetwork({
+    chainFamily: "evm",
+    chainSelectorName: config.chainSelectorName,
+    isTestnet: true,
+  });
+
+  if (!network) {
+    throw new Error(`Network not found: ${config.chainSelectorName}`);
+  }
+
+  const evmClient = new cre.capabilities.EVMClient(
+    network.chainSelector.selector,
+  );
+  const eventHash = keccak256(toHex(eventSignature));
 
   return [
-    handler(
-      cronTrigger.trigger({
-        schedule: config.schedule,
+    cre.handler(
+      evmClient.logTrigger({
+        addresses: [config.complianceRegistryAddress],
+        topics: [{ values: [eventHash] }],
+        confidence: "CONFIDENCE_LEVEL_FINALIZED",
       }),
-      onCronTrigger,
+      onLogTrigger,
     ),
   ];
 };

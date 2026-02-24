@@ -176,6 +176,102 @@ export function useFundVaultStats() {
 }
 
 // ============================================================
+// useTotalAssets — reads totalAssets() from FundVault (USDC 6 dec)
+// ============================================================
+export function useTotalAssets() {
+  const { data, isLoading } = useReadContract({
+    address: CONTRACTS.fundVault,
+    abi: fundVaultAbi,
+    functionName: "totalAssets",
+    chainId: sepolia.id,
+    query: { refetchInterval: REFETCH_INTERVAL },
+  });
+
+  return {
+    totalAssets: data ? Number(formatUnits(data as bigint, 6)) : undefined,
+    isLoading,
+  };
+}
+
+// ============================================================
+// usePortfolioAllocation — reads USDC, aToken, cToken balances
+// to compute the live portfolio breakdown
+// ============================================================
+const IERC20_BALANCE = [
+  {
+    type: "function" as const,
+    name: "balanceOf",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view" as const,
+  },
+] as const;
+
+export function usePortfolioAllocation() {
+  const { data, isLoading } = useReadContracts({
+    contracts: [
+      {
+        address: CONTRACTS.mockUSDC,
+        abi: IERC20_BALANCE,
+        functionName: "balanceOf",
+        args: [CONTRACTS.fundVault],
+        chainId: sepolia.id,
+      },
+      {
+        address: CONTRACTS.mockAavePool,
+        abi: IERC20_BALANCE,
+        functionName: "balanceOf",
+        args: [CONTRACTS.fundVault],
+        chainId: sepolia.id,
+      },
+      {
+        address: CONTRACTS.mockCompoundReserve,
+        abi: IERC20_BALANCE,
+        functionName: "balanceOf",
+        args: [CONTRACTS.fundVault],
+        chainId: sepolia.id,
+      },
+    ],
+    query: { refetchInterval: REFETCH_INTERVAL },
+  });
+
+  const idle = data?.[0]?.result as bigint | undefined;
+  const aave = data?.[1]?.result as bigint | undefined;
+  const compound = data?.[2]?.result as bigint | undefined;
+
+  const idleNum = idle ? Number(formatUnits(idle, 6)) : 0;
+  const aaveNum = aave ? Number(formatUnits(aave, 6)) : 0;
+  const compNum = compound ? Number(formatUnits(compound, 6)) : 0;
+  const total = idleNum + aaveNum + compNum;
+
+  const allocation =
+    total > 0
+      ? [
+          {
+            name: "Idle USDC",
+            value: Math.round((idleNum / total) * 100),
+            amount: idleNum,
+            color: "hsl(217, 91%, 60%)",
+          },
+          {
+            name: "Aave V3",
+            value: Math.round((aaveNum / total) * 100),
+            amount: aaveNum,
+            color: "hsl(260, 60%, 55%)",
+          },
+          {
+            name: "Compound V3",
+            value: Math.round((compNum / total) * 100),
+            amount: compNum,
+            color: "hsl(142, 71%, 45%)",
+          },
+        ]
+      : undefined;
+
+  return { allocation, total, isLoading };
+}
+
+// ============================================================
 // Utility: format a UNIX timestamp to relative "X ago" string
 // ============================================================
 export function formatTimeAgo(timestamp: number | undefined): string {

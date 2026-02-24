@@ -1,524 +1,531 @@
 export const complianceRegistryAbi = [
   {
-    "type": "constructor",
-    "inputs": [
+    type: "constructor",
+    inputs: [
       {
-        "name": "admin",
-        "type": "address",
-        "internalType": "address"
+        name: "admin",
+        type: "address",
+        internalType: "address",
       },
       {
-        "name": "complianceOfficer",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "complianceOfficer",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "stateMutability": "nonpayable"
+    stateMutability: "nonpayable",
   },
   {
-    "type": "function",
-    "name": "COMPLIANCE_OFFICER_ROLE",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "COMPLIANCE_OFFICER_ROLE",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "CRE_WORKFLOW_ROLE",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "CRE_WORKFLOW_ROLE",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "DEFAULT_ADMIN_ROLE",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "DEFAULT_ADMIN_ROLE",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "batchUpdateCompliance",
-    "inputs": [
+    type: "function",
+    name: "batchUpdateCompliance",
+    inputs: [
       {
-        "name": "investors",
-        "type": "address[]",
-        "internalType": "address[]"
+        name: "investors",
+        type: "address[]",
+        internalType: "address[]",
       },
       {
-        "name": "kycStatus",
-        "type": "bool[]",
-        "internalType": "bool[]"
+        name: "kycStatus",
+        type: "bool[]",
+        internalType: "bool[]",
       },
       {
-        "name": "sanctionStatus",
-        "type": "bool[]",
-        "internalType": "bool[]"
-      }
+        name: "sanctionStatus",
+        type: "bool[]",
+        internalType: "bool[]",
+      },
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
-    "type": "function",
-    "name": "getComplianceStatus",
-    "inputs": [
+    type: "function",
+    name: "getComplianceStatus",
+    inputs: [
       {
-        "name": "investor",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "investor",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "hasKYC",
-        "type": "bool",
-        "internalType": "bool"
+        name: "hasKYC",
+        type: "bool",
+        internalType: "bool",
       },
       {
-        "name": "sanctioned",
-        "type": "bool",
-        "internalType": "bool"
+        name: "sanctioned",
+        type: "bool",
+        internalType: "bool",
       },
       {
-        "name": "lastUpdated",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
+        name: "lastUpdated",
+        type: "uint256",
+        internalType: "uint256",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "getRoleAdmin",
-    "inputs": [
+    type: "function",
+    name: "getRoleAdmin",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "grantRole",
-    "inputs": [
+    type: "function",
+    name: "grantRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32",
       },
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
-    "type": "function",
-    "name": "hasRole",
-    "inputs": [
+    type: "function",
+    name: "hasRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32",
       },
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "isCompliant",
-    "inputs": [
+    type: "function",
+    name: "isCompliant",
+    inputs: [
       {
-        "name": "investor",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "investor",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "isSanctioned",
-    "inputs": [
+    type: "function",
+    name: "isSanctioned",
+    inputs: [
       {
-        "name": "investor",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "investor",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "pause",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "pause",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
-    "type": "function",
-    "name": "paused",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "paused",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "renounceRole",
-    "inputs": [
+    type: "function",
+    name: "renounceRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32",
       },
       {
-        "name": "callerConfirmation",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "callerConfirmation",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
-    "type": "function",
-    "name": "revokeRole",
-    "inputs": [
+    type: "function",
+    name: "revokeRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32",
       },
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
-    "type": "function",
-    "name": "supportsInterface",
-    "inputs": [
+    type: "function",
+    name: "supportsInterface",
+    inputs: [
       {
-        "name": "interfaceId",
-        "type": "bytes4",
-        "internalType": "bytes4"
-      }
+        name: "interfaceId",
+        type: "bytes4",
+        internalType: "bytes4",
+      },
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
     ],
-    "stateMutability": "view"
+    stateMutability: "view",
   },
   {
-    "type": "function",
-    "name": "unpause",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "unpause",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
-    "type": "function",
-    "name": "updateCompliance",
-    "inputs": [
+    type: "function",
+    name: "requestComplianceScreening",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "updateCompliance",
+    inputs: [
       {
-        "name": "investor",
-        "type": "address",
-        "internalType": "address"
+        name: "investor",
+        type: "address",
+        internalType: "address",
       },
       {
-        "name": "hasKYC",
-        "type": "bool",
-        "internalType": "bool"
+        name: "hasKYC",
+        type: "bool",
+        internalType: "bool",
       },
       {
-        "name": "sanctioned",
-        "type": "bool",
-        "internalType": "bool"
-      }
+        name: "sanctioned",
+        type: "bool",
+        internalType: "bool",
+      },
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
-    "type": "event",
-    "name": "ComplianceOfficerUpdated",
-    "inputs": [
+    type: "event",
+    name: "ComplianceOfficerUpdated",
+    inputs: [
       {
-        "name": "oldOfficer",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "oldOfficer",
+        type: "address",
+        indexed: true,
+        internalType: "address",
       },
       {
-        "name": "newOfficer",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
+        name: "newOfficer",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "event",
-    "name": "ComplianceUpdated",
-    "inputs": [
+    type: "event",
+    name: "ComplianceUpdated",
+    inputs: [
       {
-        "name": "investor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "investor",
+        type: "address",
+        indexed: true,
+        internalType: "address",
       },
       {
-        "name": "isCompliant",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
+        name: "isCompliant",
+        type: "bool",
+        indexed: false,
+        internalType: "bool",
       },
       {
-        "name": "timestamp",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
+        name: "timestamp",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "event",
-    "name": "Paused",
-    "inputs": [
+    type: "event",
+    name: "Paused",
+    inputs: [
       {
-        "name": "account",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
+        name: "account",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "event",
-    "name": "RoleAdminChanged",
-    "inputs": [
+    type: "event",
+    name: "RoleAdminChanged",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
       },
       {
-        "name": "previousAdminRole",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "previousAdminRole",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
       },
       {
-        "name": "newAdminRole",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      }
+        name: "newAdminRole",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "event",
-    "name": "RoleGranted",
-    "inputs": [
+    type: "event",
+    name: "RoleGranted",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
       },
       {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address",
       },
       {
-        "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
+        name: "sender",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "event",
-    "name": "RoleRevoked",
-    "inputs": [
+    type: "event",
+    name: "RoleRevoked",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
       },
       {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address",
       },
       {
-        "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
+        name: "sender",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "event",
-    "name": "SanctionsFlagged",
-    "inputs": [
+    type: "event",
+    name: "SanctionsFlagged",
+    inputs: [
       {
-        "name": "investor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "investor",
+        type: "address",
+        indexed: true,
+        internalType: "address",
       },
       {
-        "name": "reason",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
+        name: "reason",
+        type: "string",
+        indexed: false,
+        internalType: "string",
       },
       {
-        "name": "timestamp",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
+        name: "timestamp",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "event",
-    "name": "Unpaused",
-    "inputs": [
+    type: "event",
+    name: "Unpaused",
+    inputs: [
       {
-        "name": "account",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
+        name: "account",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
     ],
-    "anonymous": false
+    anonymous: false,
   },
   {
-    "type": "error",
-    "name": "AccessControlBadConfirmation",
-    "inputs": []
+    type: "error",
+    name: "AccessControlBadConfirmation",
+    inputs: [],
   },
   {
-    "type": "error",
-    "name": "AccessControlUnauthorizedAccount",
-    "inputs": [
+    type: "error",
+    name: "AccessControlUnauthorizedAccount",
+    inputs: [
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address",
       },
       {
-        "name": "neededRole",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ]
+        name: "neededRole",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
   },
   {
-    "type": "error",
-    "name": "EnforcedPause",
-    "inputs": []
+    type: "error",
+    name: "EnforcedPause",
+    inputs: [],
   },
   {
-    "type": "error",
-    "name": "ExpectedPause",
-    "inputs": []
+    type: "error",
+    name: "ExpectedPause",
+    inputs: [],
   },
   {
-    "type": "error",
-    "name": "InvalidAddress",
-    "inputs": []
+    type: "error",
+    name: "InvalidAddress",
+    inputs: [],
   },
   {
-    "type": "error",
-    "name": "UnauthorizedCaller",
-    "inputs": []
-  }
+    type: "error",
+    name: "UnauthorizedCaller",
+    inputs: [],
+  },
 ] as const;

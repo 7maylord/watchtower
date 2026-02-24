@@ -142,4 +142,13 @@ contract ProofOfReserveOracle is
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
+
+    event ReserveVerificationRequested(
+        address indexed requester,
+        uint256 timestamp
+    );
+
+    function requestReserveVerification() external {
+        emit ReserveVerificationRequested(msg.sender, block.timestamp);
+    }
 }
