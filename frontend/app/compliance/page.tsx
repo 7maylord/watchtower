@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   Search,
-  ExternalLink,
   ShieldCheck,
   ShieldAlert,
   CheckCircle,
@@ -13,8 +12,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import StatusBadge from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { complianceHistory } from "@/lib/mock-data";
-import { useComplianceStatus, formatTimeAgo } from "@/hooks/useContractData";
+import {
+  useComplianceStatus,
+  formatTimeAgo,
+  useComplianceHistory,
+} from "@/hooks/useContractData";
 import { type Address, isAddress } from "viem";
 
 export default function Compliance() {
@@ -29,6 +31,9 @@ export default function Compliance() {
     isLoading: complianceLoading,
     isError,
   } = useComplianceStatus(queryAddr);
+
+  const { history: complianceHistory, isLoading: historyLoading } =
+    useComplianceHistory();
 
   const handleScreen = () => {
     if (!searchAddr) return;
@@ -219,28 +224,46 @@ export default function Compliance() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {complianceHistory.map((c, i) => (
-                  <tr key={i} className="hover:bg-muted/20 transition-colors">
-                    <td className="py-3 font-mono text-foreground">
-                      {c.address}
-                    </td>
-                    <td className="py-3">
-                      <StatusBadge status={c.status} />
-                    </td>
-                    <td className="py-3 font-semibold text-foreground">
-                      {c.riskScore}
-                    </td>
-                    <td className="py-3 text-muted-foreground">{c.date}</td>
-                    <td className="py-3">
-                      <a
-                        href="#"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        {c.ipfsHash} <ExternalLink className="h-3 w-3" />
-                      </a>
+                {historyLoading ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-6 text-center text-muted-foreground"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                      Loading on-chain events...
                     </td>
                   </tr>
-                ))}
+                ) : complianceHistory.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-6 text-center text-muted-foreground"
+                    >
+                      No compliance events found yet
+                    </td>
+                  </tr>
+                ) : (
+                  complianceHistory.map((c, i) => (
+                    <tr key={i} className="hover:bg-muted/20 transition-colors">
+                      <td className="py-3 font-mono text-foreground">
+                        {c.address}
+                      </td>
+                      <td className="py-3">
+                        <StatusBadge status={c.status} />
+                      </td>
+                      <td className="py-3 font-semibold text-foreground">
+                        {c.riskScore}
+                      </td>
+                      <td className="py-3 text-muted-foreground">{c.date}</td>
+                      <td className="py-3">
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {c.documentId}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

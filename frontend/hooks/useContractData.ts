@@ -2,6 +2,7 @@
 
 import { useReadContract, useReadContracts } from "wagmi";
 import { formatUnits, type Address } from "viem";
+import { useState, useEffect } from "react";
 import { sepolia } from "wagmi/chains";
 import {
   CONTRACTS,
@@ -283,4 +284,74 @@ export function formatTimeAgo(timestamp: number | undefined): string {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
+}
+
+// ============================================================
+// useRebalancingHistory — reads rebalancing reports from Firestore
+// ============================================================
+export type RebalancingEntry = {
+  date: string;
+  action: string;
+  confidence: number;
+  status: "executed" | "skipped";
+  analysis: string;
+  documentId: string;
+};
+
+export function useRebalancingHistory() {
+  const [history, setHistory] = useState<RebalancingEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const { fetchRebalancingReports } = await import("@/lib/firestore");
+        const reports = await fetchRebalancingReports();
+        setHistory(reports);
+      } catch (e) {
+        console.error("Failed to fetch rebalancing reports:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  return { history, isLoading };
+}
+
+// ============================================================
+// useComplianceHistory — reads compliance reports from Firestore
+// ============================================================
+export type ComplianceEntry = {
+  address: string;
+  status: "approved" | "flagged";
+  riskScore: number;
+  date: string;
+  screeningDetails: string;
+  documentId: string;
+};
+
+export function useComplianceHistory() {
+  const [history, setHistory] = useState<ComplianceEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const { fetchComplianceReports } = await import("@/lib/firestore");
+        const reports = await fetchComplianceReports();
+        setHistory(reports);
+      } catch (e) {
+        console.error("Failed to fetch compliance reports:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  return { history, isLoading };
 }

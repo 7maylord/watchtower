@@ -15,14 +15,12 @@ import {
 } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatusBadge from "@/components/StatusBadge";
-import {
-  portfolioAllocation as mockAllocation,
-  rebalancingHistory,
-} from "@/lib/mock-data";
+import { portfolioAllocation as mockAllocation } from "@/lib/mock-data";
 import {
   usePortfolioAllocation,
   useTotalAssets,
   useRiskScore,
+  useRebalancingHistory,
 } from "@/hooks/useContractData";
 import { CONTRACTS, fundVaultAbi } from "@/lib/contracts";
 import {
@@ -52,6 +50,8 @@ export default function Rebalancing() {
   const { allocation, isLoading: allocLoading } = usePortfolioAllocation();
   const { totalAssets } = useTotalAssets();
   useRiskScore();
+  const { history: rebalancingHistory, isLoading: historyLoading } =
+    useRebalancingHistory();
 
   const displayAllocation = allocation ?? mockAllocation;
   const isLive = allocation !== undefined;
