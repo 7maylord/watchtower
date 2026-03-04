@@ -42,6 +42,11 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
     // Roles
     bytes32 public constant FUND_MANAGER_ROLE = keccak256("FUND_MANAGER_ROLE");
     bytes32 public constant CRE_WORKFLOW_ROLE = keccak256("CRE_WORKFLOW_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+
+    // CCIP admin (for TokenAdminRegistry registration)
+    address private s_ccipAdmin;
 
     // External contracts
     IERC20 private immutable _underlyingAsset;
@@ -66,6 +71,10 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
     event RebalanceRiskThresholdUpdated(uint8 oldThreshold, uint8 newThreshold);
     event AnalysisRequested(address indexed requester, uint256 timestamp);
     event RebalanceRequested(address indexed requester, uint256 timestamp);
+    event CCIPAdminTransferred(
+        address indexed previousAdmin,
+        address indexed newAdmin
+    );
 
     /**
      * @notice Constructor
@@ -105,6 +114,9 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(FUND_MANAGER_ROLE, fundManager);
+
+        // Set deployer as initial CCIP admin for TokenAdminRegistry registration
+        s_ccipAdmin = admin;
     }
 
     function setMockProtocols(
@@ -431,5 +443,83 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
 
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
+    }
+
+    // ===== CCIP Cross-Chain Token (CCT) Support =====
+    // Aligned with Chainlink's BurnMintERC20 pattern:
+    // https://github.com/smartcontractkit/chainlink-evm/blob/contracts-solidity/1.5.0/contracts/src/v0.8/shared/token/ERC20/BurnMintERC20.sol
+
+    /**
+     * @notice Returns the CCIP admin address for TokenAdminRegistry registration
+     * @dev Required by CCIP's RegistryModuleOwnerCustom to claim admin role
+     */
+    function getCCIPAdmin() external view returns (address) {
+        return s_ccipAdmin;
+    }
+
+    /**
+     * @notice Update the CCIP admin address
+     * @param newAdmin New CCIP admin address
+     */
+    function setCCIPAdmin(
+        address newAdmin
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newAdmin != address(0), "Invalid CCIP admin");
+        address previousAdmin = s_ccipAdmin;
+        s_ccipAdmin = newAdmin;
+        emit CCIPAdminTransferred(previousAdmin, newAdmin);
+    }
+
+    /**
+     * @notice Grant mint and burn roles to a CCIP token pool
+     * @param burnAndMinter Address to grant both roles
+     */
+    function grantMintAndBurnRoles(
+        address burnAndMinter
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(MINTER_ROLE, burnAndMinter);
+        _grantRole(BURNER_ROLE, burnAndMinter);
+    }
+
+    /**
+     * @notice Mint tokens — used by CCIP BurnMintTokenPool on destination chain
+     * @param account Recipient address
+     * @param amount Amount to mint
+     */
+    function mint(
+        address account,
+        uint256 amount
+    ) external onlyRole(MINTER_ROLE) {
+        _mint(account, amount);
+    }
+
+    /**
+     * @notice Burn tokens — used by CCIP BurnMintTokenPool on source chain
+     * @param amount Amount to burn from caller
+     */
+    function burn(uint256 amount) external onlyRole(BURNER_ROLE) {
+        _burn(msg.sender, amount);
+    }
+
+    /**
+     * @notice Burn tokens from a specific account — used by CCIP BurnMintTokenPool
+     * @param account Account to burn from
+     * @param amount Amount to burn
+     */
+    function burnFrom(
+        address account,
+        uint256 amount
+    ) external onlyRole(BURNER_ROLE) {
+        _spendAllowance(account, msg.sender, amount);
+        _burn(account, amount);
+    }
+
+    /**
+     * @notice ERC165 interface support
+     */
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }
