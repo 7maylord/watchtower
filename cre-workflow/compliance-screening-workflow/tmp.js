@@ -17842,23 +17842,26 @@ class FirebaseClient {
     };
   }
 }
+var evmChainSchema = exports_external.object({
+  chainName: exports_external.string(),
+  complianceRegistryAddress: exports_external.string(),
+  gasLimit: exports_external.string()
+});
 var configSchema = exports_external.object({
   schedule: exports_external.string(),
-  complianceRegistryAddress: exports_external.string(),
-  chainSelectorName: exports_external.string(),
-  gasLimit: exports_external.string(),
+  evms: exports_external.array(evmChainSchema),
   chainalysisApiKey: exports_external.string(),
   firebaseApiKey: exports_external.string(),
   firebaseProjectId: exports_external.string()
 });
-var getComplianceStatus = (runtime2, investorAddress) => {
+var getComplianceStatus = (runtime2, chain, investorAddress) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const callData = encodeFunctionData({
@@ -17869,7 +17872,7 @@ var getComplianceStatus = (runtime2, investorAddress) => {
   const contractCall = evmClient.callContract(runtime2, {
     call: encodeCallMsg({
       from: zeroAddress,
-      to: runtime2.config.complianceRegistryAddress,
+      to: chain.complianceRegistryAddress,
       data: callData
     }),
     blockNumber: LAST_FINALIZED_BLOCK_NUMBER
@@ -17918,18 +17921,18 @@ var performComplianceScreening = async (runtime2, investorAddress) => {
     ipfsHash
   };
 };
-var updateComplianceStatus = (runtime2, investorAddress, isKYCVerified, isSanctioned) => {
+var updateComplianceStatus = (runtime2, chain, investorAddress, isKYCVerified, isSanctioned) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const logger = new StructuredLogger(runtime2);
-  logger.info("Updating ComplianceRegistry", {
+  logger.info(`Updating ComplianceRegistry on ${chain.chainName}`, {
     address: investorAddress,
     kycVerified: isKYCVerified,
     sanctioned: isSanctioned
@@ -17946,17 +17949,17 @@ var updateComplianceStatus = (runtime2, investorAddress, isKYCVerified, isSancti
     hashingAlgo: "keccak256"
   }).result();
   const resp = evmClient.writeReport(runtime2, {
-    receiver: runtime2.config.complianceRegistryAddress,
+    receiver: chain.complianceRegistryAddress,
     report: reportResponse,
     gasConfig: {
-      gasLimit: runtime2.config.gasLimit
+      gasLimit: chain.gasLimit
     }
   }).result();
   if (resp.txStatus !== TxStatus.SUCCESS) {
-    throw new Error(`Failed to update ComplianceRegistry: ${resp.errorMessage || resp.txStatus}`);
+    throw new Error(`Failed to update ComplianceRegistry on ${chain.chainName}: ${resp.errorMessage || resp.txStatus}`);
   }
   const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
-  logger.success("ComplianceRegistry updated", { txHash });
+  logger.success(`ComplianceRegistry updated on ${chain.chainName}`, { txHash });
   return txHash;
 };
 var runComplianceWorkflow = async (runtime2) => {
@@ -17964,7 +17967,8 @@ var runComplianceWorkflow = async (runtime2) => {
   logger.info("\uD83D\uDE80 Starting Production Compliance Screening Workflow");
   const testInvestor = "0x1234567890123456789012345678901234567890";
   return withErrorHandling(async () => {
-    const currentStatus = getComplianceStatus(runtime2, testInvestor);
+    const primaryChain = runtime2.config.evms[0];
+    const currentStatus = getComplianceStatus(runtime2, primaryChain, testInvestor);
     logger.info("Current compliance status", currentStatus);
     const screening = await performComplianceScreening(runtime2, testInvestor);
     logger.info("Screening complete", {
@@ -17977,12 +17981,17 @@ var runComplianceWorkflow = async (runtime2) => {
       logger.info("No update needed - status unchanged");
       return "No update required";
     }
-    const txHash = updateComplianceStatus(runtime2, testInvestor, screening.shouldApprove, !screening.shouldApprove);
+    const txHashes = [];
+    for (const chain of runtime2.config.evms) {
+      const txHash = updateComplianceStatus(runtime2, chain, testInvestor, screening.shouldApprove, !screening.shouldApprove);
+      txHashes.push(txHash);
+    }
     logger.success("✅ Compliance Screening Complete", {
-      txHash,
-      ipfsHash: screening.ipfsHash
+      txHashes,
+      ipfsHash: screening.ipfsHash,
+      chainsUpdated: runtime2.config.evms.length
     });
-    return txHash;
+    return txHashes.join(",");
   }, { operation: "Compliance Screening", runtime: runtime2 });
 };
 var eventAbi = parseAbi([
@@ -17997,23 +18006,25 @@ var onLogTrigger = async (runtime2, log) => {
   return runComplianceWorkflow(runtime2);
 };
 var initWorkflow = (config) => {
-  const network248 = getNetwork({
-    chainFamily: "evm",
-    chainSelectorName: config.chainSelectorName,
-    isTestnet: true
-  });
-  if (!network248) {
-    throw new Error(`Network not found: ${config.chainSelectorName}`);
-  }
-  const evmClient = new cre.capabilities.EVMClient(network248.chainSelector.selector);
   const eventHash = keccak256(toHex(eventSignature));
-  return [
-    cre.handler(evmClient.logTrigger({
-      addresses: [config.complianceRegistryAddress],
+  const handlers = [];
+  for (const chain of config.evms) {
+    const network248 = getNetwork({
+      chainFamily: "evm",
+      chainSelectorName: chain.chainName,
+      isTestnet: true
+    });
+    if (!network248) {
+      throw new Error(`Network not found: ${chain.chainName}`);
+    }
+    const evmClient = new cre.capabilities.EVMClient(network248.chainSelector.selector);
+    handlers.push(cre.handler(evmClient.logTrigger({
+      addresses: [chain.complianceRegistryAddress],
       topics: [{ values: [eventHash] }],
       confidence: "CONFIDENCE_LEVEL_FINALIZED"
-    }), onLogTrigger)
-  ];
+    }), onLogTrigger));
+  }
+  return handlers;
 };
 async function main() {
   const runner = await Runner.newRunner({

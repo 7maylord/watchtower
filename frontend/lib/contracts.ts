@@ -18,26 +18,29 @@ export type ChainContracts = {
   mockUSDC: Address;
   mockAavePool: Address;
   mockCompoundReserve: Address;
+  ccipRouter: Address;
 };
 
 export const SEPOLIA_CONTRACTS: ChainContracts = {
-  complianceRegistry: "0xe67ae2ac43d527900d975a732c1bef46af41ca74" as Address,
-  riskOracle: "0xff3c4ac97f2dfb15ada9f53627b5c54d0a2fa5b0" as Address,
-  proofOfReserveOracle: "0xa35eda8566c3d2be525c27eaed9f91625475afe2" as Address,
-  fundVault: "0x400ca83357f9d141144dd4ad3129790c90ee2a83" as Address,
-  mockUSDC: "0x6832ba0f8a044e9ea8f90b8bea9fcf8db54950d2" as Address,
-  mockAavePool: "0x82b66c77971056e352b47303f3c5f726118325c4" as Address,
-  mockCompoundReserve: "0x3e06ac1b578252021a360de2ab8df0c7dc2ee417" as Address,
+  complianceRegistry: "0x164940bd662A21174dd5Db21AECc1Ae46d8b1c56" as Address,
+  riskOracle: "0x17238806EdDcF45c0e85eE3FC74ad7A2e4f128A7" as Address,
+  proofOfReserveOracle: "0xcb66fe00e909E86Fb2F392DD0c2122E1ac7Eed52" as Address,
+  fundVault: "0x27b2e0AF46B4E63749DF2Ef4325FDa82F9b86ED2" as Address,
+  mockUSDC: "0x57a1c6761Ccade88c5eA2735BfbAC0EA83E4707D" as Address,
+  mockAavePool: "0xAC7a14650aD408a9958a6Df0A7453e0D809aa869" as Address,
+  mockCompoundReserve: "0xa354b536E9Ae3C70B90F1f17616Ca1F1f57CC027" as Address,
+  ccipRouter: "0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59" as Address,
 };
 
 export const BASE_SEPOLIA_CONTRACTS: ChainContracts = {
-  complianceRegistry: "0xb3bf5ebc87234ce49d6bb423b85e23a3eb083fe0" as Address,
-  riskOracle: "0x38977cf2979f5040b5cc660812e1faf802e15adc" as Address,
-  proofOfReserveOracle: "0x2cb551cba355339f3c6b43f931bbfde60e6986fa" as Address,
-  fundVault: "0x1a7d6e82afbc0069bde8a33c86d8439c06f2daa5" as Address,
-  mockUSDC: "0x73a834d8de5fe088cb183132358cd98e5fc3a9b9" as Address,
-  mockAavePool: "0x31f85c18172baa5d796ff140d8db4799bcf1a8bf" as Address,
-  mockCompoundReserve: "0xdd552b4db4007d4973adc12a46928ef5bc411c5d" as Address,
+  complianceRegistry: "0xB14a5927b20927A8812AC060c00CBE17772CcFA0" as Address,
+  riskOracle: "0xe47691F0188D8BD9013e1a5cCaF34baD0b37cf4B" as Address,
+  proofOfReserveOracle: "0x892C2C0eD81f80Ba727af29c7A128A4A2e9d053c" as Address,
+  fundVault: "0x785708dD1753fdEAc9C3d1aaC02f5c0cd3B1858D" as Address,
+  mockUSDC: "0xe41e15b91Ae30f3cB4f0193c4ca1f00c82342D8f" as Address,
+  mockAavePool: "0xB6A8946E994e401cF9845E7a0a276d3233667a84" as Address,
+  mockCompoundReserve: "0x9B489aECB74F689Ea108a85186a1D4C8f626E0d4" as Address,
+  ccipRouter: "0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93" as Address,
 };
 
 // All supported chains
@@ -53,6 +56,18 @@ export const SUPPORTED_CHAINS = [
     contracts: BASE_SEPOLIA_CONTRACTS,
   },
 ] as const;
+
+// CCIP chain selectors (used by CCIP Router for cross-chain messaging)
+export const CCIP_CHAIN_SELECTORS: Record<number, bigint> = {
+  [SEPOLIA_CHAIN_ID]: BigInt("16015286601757825753"),
+  [BASE_SEPOLIA_CHAIN_ID]: BigInt("10344971235874465080"),
+};
+
+// Maps each chain to its cross-chain destination
+export const DESTINATION_CHAIN: Record<number, number> = {
+  [SEPOLIA_CHAIN_ID]: BASE_SEPOLIA_CHAIN_ID,
+  [BASE_SEPOLIA_CHAIN_ID]: SEPOLIA_CHAIN_ID,
+};
 
 // Helper to get contracts for a specific chain
 export function getContractsForChain(chainId: number): ChainContracts {

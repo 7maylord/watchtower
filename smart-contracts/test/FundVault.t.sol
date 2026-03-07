@@ -10,6 +10,36 @@ import "../src/mock/MockUSDC.sol";
 import "../src/mock/MockAavePool.sol";
 import "../src/mock/MockCompoundReserve.sol";
 
+/// @notice Mock CCIP Router for testing bridgeShares / getBridgeFee
+contract MockCCIPRouter {
+    uint256 public constant MOCK_FEE = 0.01 ether;
+    bytes32 public constant MOCK_MESSAGE_ID = keccak256("mock_ccip_message");
+
+    uint64 public lastDestChainSelector;
+    address public lastTokenAddress;
+    uint256 public lastTokenAmount;
+    address public lastReceiver;
+
+    function getFee(
+        uint64,
+        CCIPClient.EVM2AnyMessage calldata
+    ) external pure returns (uint256) {
+        return MOCK_FEE;
+    }
+
+    function ccipSend(
+        uint64 destinationChainSelector,
+        CCIPClient.EVM2AnyMessage calldata message
+    ) external payable returns (bytes32) {
+        require(msg.value >= MOCK_FEE, "Insufficient fee");
+        lastDestChainSelector = destinationChainSelector;
+        lastTokenAddress = message.tokenAmounts[0].token;
+        lastTokenAmount = message.tokenAmounts[0].amount;
+        lastReceiver = abi.decode(message.receiver, (address));
+        return MOCK_MESSAGE_ID;
+    }
+}
+
 contract FundVaultTest is Test {
     FundVault public vault;
     ComplianceRegistry public compliance;
@@ -83,6 +113,10 @@ contract FundVaultTest is Test {
         usdc.transfer(investor1, 10000e6);
         usdc.transfer(investor2, 10000e6);
         vm.stopPrank();
+
+        // Deal ETH for bridge fee tests
+        vm.deal(fundManager, 10 ether);
+        vm.deal(creWorkflow, 10 ether);
     }
 
     function test_Constructor() public view {
@@ -112,13 +146,13 @@ contract FundVaultTest is Test {
         usdc.approve(address(vault), 1000e6);
 
         vm.expectEmit(true, false, false, true);
-        emit Deposited(investor1, 1000e6, 1000e6);
+        emit Deposited(investor1, 1000e6, 1000e18);
 
         uint256 shares = vault.deposit(1000e6);
         vm.stopPrank();
 
-        assertEq(shares, 1000e6); // 1:1 for first deposit
-        assertEq(vault.balanceOf(investor1), 1000e6);
+        assertEq(shares, 1000e18); // 1000 USDC (6 dec) → 1000 shares (18 dec)
+        assertEq(vault.balanceOf(investor1), 1000e18);
         assertEq(vault.totalAssets(), 1000e6);
         assertEq(usdc.balanceOf(address(vault)), 1000e6);
     }
@@ -151,8 +185,8 @@ contract FundVaultTest is Test {
         uint256 shares = vault.deposit(1000e6);
         vm.stopPrank();
 
-        assertEq(shares, 500e6); // Gets half the shares since fund doubled
-        assertEq(vault.balanceOf(investor2), 500e6);
+        assertEq(shares, 500e18); // Gets half the shares since fund doubled
+        assertEq(vault.balanceOf(investor2), 500e18);
     }
 
     function test_RevertDeposit_NotCompliant() public {
@@ -228,13 +262,13 @@ contract FundVaultTest is Test {
         uint256 initialBalance = usdc.balanceOf(investor1);
 
         vm.expectEmit(true, false, false, true);
-        emit Withdrawn(investor1, 500e6, 500e6);
+        emit Withdrawn(investor1, 500e18, 500e6);
 
-        uint256 amount = vault.withdraw(500e6);
+        uint256 amount = vault.withdraw(500e18);
         vm.stopPrank();
 
         assertEq(amount, 500e6);
-        assertEq(vault.balanceOf(investor1), 500e6);
+        assertEq(vault.balanceOf(investor1), 500e18);
         assertEq(usdc.balanceOf(investor1), initialBalance + 500e6);
         assertEq(vault.totalAssets(), 500e6);
     }
@@ -259,9 +293,9 @@ contract FundVaultTest is Test {
         uint256 initialBalance = usdc.balanceOf(investor1);
 
         vm.prank(investor1);
-        uint256 amount = vault.withdraw(500e6); // Withdraw half shares
+        uint256 amount = vault.withdraw(500e18); // Withdraw half shares
 
-        assertEq(amount, 1000e6); // Gets $1000 for 500 shares
+        assertEq(amount, 1000e6); // Gets $1000 for 500 shares (fund doubled)
         assertEq(usdc.balanceOf(investor1), initialBalance + 1000e6);
     }
 
@@ -284,7 +318,7 @@ contract FundVaultTest is Test {
 
         vm.prank(investor1);
         vm.expectRevert(IFundVault.NotCompliant.selector);
-        vault.withdraw(500e6);
+        vault.withdraw(500e18);
     }
 
     function test_RevertWithdraw_WhenPaused() public {
@@ -312,11 +346,11 @@ contract FundVaultTest is Test {
         vault.deposit(1000e6);
 
         // Transfer
-        vault.transfer(investor2, 500e6);
+        vault.transfer(investor2, 500e18);
         vm.stopPrank();
 
-        assertEq(vault.balanceOf(investor1), 500e6);
-        assertEq(vault.balanceOf(investor2), 500e6);
+        assertEq(vault.balanceOf(investor1), 500e18);
+        assertEq(vault.balanceOf(investor2), 500e18);
     }
 
     function test_RevertTransfer_SenderNotCompliant() public {
@@ -342,7 +376,7 @@ contract FundVaultTest is Test {
 
         vm.prank(investor1);
         vm.expectRevert(IFundVault.NotCompliant.selector);
-        vault.transfer(investor2, 500e6);
+        vault.transfer(investor2, 500e18);
     }
 
     function test_RevertTransfer_RecipientNotCompliant() public {
@@ -360,7 +394,7 @@ contract FundVaultTest is Test {
         vault.deposit(1000e6);
 
         vm.expectRevert(IFundVault.NotCompliant.selector);
-        vault.transfer(investor2, 500e6);
+        vault.transfer(investor2, 500e18);
         vm.stopPrank();
     }
 
@@ -502,6 +536,159 @@ contract FundVaultTest is Test {
         assertEq(vault.sharePrice(), 2e18); // $2 per share
     }
 
+    // ===== CCIP Bridge Tests =====
+
+    function _setupBridge() internal returns (MockCCIPRouter router) {
+        router = new MockCCIPRouter();
+        vm.prank(admin);
+        vault.setCCIPRouter(address(router));
+    }
+
+    function _depositForFundManager(uint256 amount) internal {
+        // Make fund manager compliant so they can hold shares
+        vm.prank(complianceOfficer);
+        compliance.updateCompliance(fundManager, true, false);
+
+        vm.prank(creWorkflow);
+        porOracle.updateReserves(amount * 2, amount * 2, 0);
+
+        // Give fund manager USDC and deposit
+        vm.prank(admin);
+        usdc.transfer(fundManager, amount);
+
+        vm.startPrank(fundManager);
+        usdc.approve(address(vault), amount);
+        vault.deposit(amount);
+        vm.stopPrank();
+    }
+
+    function test_SetCCIPRouter() public {
+        MockCCIPRouter router = new MockCCIPRouter();
+        vm.prank(admin);
+        vault.setCCIPRouter(address(router));
+        assertEq(address(vault.ccipRouter()), address(router));
+    }
+
+    function test_RevertSetCCIPRouter_Unauthorized() public {
+        vm.prank(investor1);
+        vm.expectRevert();
+        vault.setCCIPRouter(address(1));
+    }
+
+    function test_RevertSetCCIPRouter_ZeroAddress() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid router");
+        vault.setCCIPRouter(address(0));
+    }
+
+    function test_GetBridgeFee() public {
+        MockCCIPRouter router = _setupBridge();
+        uint256 fee = vault.getBridgeFee(
+            16015286601757825753, // Sepolia selector
+            investor1,
+            1000e18
+        );
+        assertEq(fee, router.MOCK_FEE());
+    }
+
+    function test_RevertGetBridgeFee_RouterNotSet() public {
+        vm.expectRevert(FundVault.RouterNotSet.selector);
+        vault.getBridgeFee(16015286601757825753, investor1, 1000e18);
+    }
+
+    function test_BridgeShares_FundManager() public {
+        MockCCIPRouter router = _setupBridge();
+        _depositForFundManager(1000e6);
+
+        uint256 sharesBefore = vault.balanceOf(fundManager);
+        uint256 bridgeAmount = 500e18;
+        uint64 destSelector = 10344971235874465080; // Base Sepolia
+
+        // Make vault compliant for the transfer
+        vm.prank(complianceOfficer);
+        compliance.updateCompliance(address(vault), true, false);
+
+        vm.prank(fundManager);
+        bytes32 messageId = vault.bridgeShares{value: 0.01 ether}(
+            destSelector,
+            investor1,
+            bridgeAmount
+        );
+
+        assertEq(messageId, router.MOCK_MESSAGE_ID());
+        assertEq(vault.balanceOf(fundManager), sharesBefore - bridgeAmount);
+        assertEq(router.lastDestChainSelector(), destSelector);
+        assertEq(router.lastTokenAmount(), bridgeAmount);
+        assertEq(router.lastReceiver(), investor1);
+    }
+
+    function test_BridgeShares_CREWorkflow() public {
+        _setupBridge();
+
+        // Give CRE workflow some shares via minting
+        vm.prank(complianceOfficer);
+        compliance.updateCompliance(creWorkflow, true, false);
+        vm.prank(complianceOfficer);
+        compliance.updateCompliance(address(vault), true, false);
+
+        // Mint shares to CRE workflow for testing (admin grants minter role to itself, then mints)
+        vm.startPrank(admin);
+        vault.grantRole(vault.MINTER_ROLE(), admin);
+        vault.mint(creWorkflow, 1000e18);
+        vm.stopPrank();
+
+        vm.prank(creWorkflow);
+        vault.bridgeShares{value: 0.01 ether}(
+            10344971235874465080,
+            investor1,
+            500e18
+        );
+
+        assertEq(vault.balanceOf(creWorkflow), 500e18);
+    }
+
+    function test_RevertBridgeShares_Unauthorized() public {
+        _setupBridge();
+
+        vm.deal(investor1, 1 ether);
+        vm.prank(investor1);
+        vm.expectRevert("Unauthorized");
+        vault.bridgeShares{value: 0.01 ether}(
+            10344971235874465080,
+            investor2,
+            100e18
+        );
+    }
+
+    function test_RevertBridgeShares_RouterNotSet() public {
+        vm.deal(fundManager, 1 ether);
+        vm.prank(fundManager);
+        vm.expectRevert(FundVault.RouterNotSet.selector);
+        vault.bridgeShares{value: 0.01 ether}(
+            10344971235874465080,
+            investor1,
+            100e18
+        );
+    }
+
+    function test_RevertBridgeShares_WhenPaused() public {
+        _setupBridge();
+
+        vm.prank(admin);
+        vault.pause();
+
+        vm.deal(fundManager, 1 ether);
+        vm.prank(fundManager);
+        vm.expectRevert();
+        vault.bridgeShares{value: 0.01 ether}(
+            10344971235874465080,
+            investor1,
+            100e18
+        );
+    }
+
+    // ===== Full Lifecycle Test =====
+
     function test_FullLifecycle() public {
         // 1. Setup compliance
         vm.startPrank(complianceOfficer);
@@ -539,7 +726,7 @@ contract FundVaultTest is Test {
 
         // 7. Withdraw
         vm.prank(investor1);
-        vault.withdraw(1000e6);
+        vault.withdraw(1000e18);
 
         // Verify final state
         assertTrue(vault.balanceOf(investor1) > 0);

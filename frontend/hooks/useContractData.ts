@@ -1,28 +1,42 @@
 "use client";
 
-import { useReadContract, useReadContracts } from "wagmi";
+import { useReadContract, useReadContracts, useChainId } from "wagmi";
 import { formatUnits, type Address } from "viem";
-import { useState, useEffect } from "react";
-import { sepolia } from "wagmi/chains";
+import { useState, useEffect, useMemo } from "react";
 import {
-  CONTRACTS,
+  getContractsForChain,
   riskOracleAbi,
   complianceRegistryAbi,
   proofOfReserveOracleAbi,
   fundVaultAbi,
+  type ChainContracts,
 } from "@/lib/contracts";
 
 const REFETCH_INTERVAL = 30_000; // 30 seconds
 
 // ============================================================
+// useActiveChainContracts — returns contracts for the connected chain
+// ============================================================
+export function useActiveChainContracts(): {
+  contracts: ChainContracts;
+  chainId: number;
+} {
+  const chainId = useChainId();
+  const contracts = useMemo(() => getContractsForChain(chainId), [chainId]);
+  return { contracts, chainId };
+}
+
+// ============================================================
 // useRiskScore — reads getCurrentRiskScore() from RiskOracle
 // ============================================================
 export function useRiskScore() {
+  const { contracts, chainId } = useActiveChainContracts();
+
   const { data, isLoading, isError, refetch } = useReadContract({
-    address: CONTRACTS.riskOracle,
+    address: contracts.riskOracle,
     abi: riskOracleAbi,
     functionName: "getCurrentRiskScore",
-    chainId: sepolia.id,
+    chainId,
     query: {
       refetchInterval: REFETCH_INTERVAL,
     },
@@ -42,11 +56,13 @@ export function useRiskScore() {
 // useShouldLiquidate — reads shouldTriggerLiquidation()
 // ============================================================
 export function useShouldLiquidate() {
+  const { contracts, chainId } = useActiveChainContracts();
+
   const { data, isLoading } = useReadContract({
-    address: CONTRACTS.riskOracle,
+    address: contracts.riskOracle,
     abi: riskOracleAbi,
     functionName: "shouldTriggerLiquidation",
-    chainId: sepolia.id,
+    chainId,
     query: {
       refetchInterval: REFETCH_INTERVAL,
     },
@@ -62,11 +78,13 @@ export function useShouldLiquidate() {
 // useReserveData — reads getCurrentReserves() from PoR Oracle
 // ============================================================
 export function useReserveData() {
+  const { contracts, chainId } = useActiveChainContracts();
+
   const { data, isLoading, isError, refetch } = useReadContract({
-    address: CONTRACTS.proofOfReserveOracle,
+    address: contracts.proofOfReserveOracle,
     abi: proofOfReserveOracleAbi,
     functionName: "getCurrentReserves",
-    chainId: sepolia.id,
+    chainId,
     query: {
       refetchInterval: REFETCH_INTERVAL,
     },
@@ -107,12 +125,14 @@ export function useReserveData() {
 // useComplianceStatus — reads getComplianceStatus(address)
 // ============================================================
 export function useComplianceStatus(address: Address | undefined) {
+  const { contracts, chainId } = useActiveChainContracts();
+
   const { data, isLoading, isError, refetch } = useReadContract({
-    address: CONTRACTS.complianceRegistry,
+    address: contracts.complianceRegistry,
     abi: complianceRegistryAbi,
     functionName: "getComplianceStatus",
     args: address ? [address] : undefined,
-    chainId: sepolia.id,
+    chainId,
     query: {
       enabled: !!address,
     },
@@ -132,25 +152,27 @@ export function useComplianceStatus(address: Address | undefined) {
 // useFundVaultStats — reads totalSupply + sharePrice in parallel
 // ============================================================
 export function useFundVaultStats() {
+  const { contracts, chainId } = useActiveChainContracts();
+
   const { data, isLoading, isError } = useReadContracts({
     contracts: [
       {
-        address: CONTRACTS.fundVault,
+        address: contracts.fundVault,
         abi: fundVaultAbi,
         functionName: "totalSupply",
-        chainId: sepolia.id,
+        chainId,
       },
       {
-        address: CONTRACTS.fundVault,
+        address: contracts.fundVault,
         abi: fundVaultAbi,
         functionName: "sharePrice",
-        chainId: sepolia.id,
+        chainId,
       },
       {
-        address: CONTRACTS.fundVault,
+        address: contracts.fundVault,
         abi: fundVaultAbi,
         functionName: "name",
-        chainId: sepolia.id,
+        chainId,
       },
     ],
     query: {
@@ -180,11 +202,13 @@ export function useFundVaultStats() {
 // useTotalAssets — reads totalAssets() from FundVault (USDC 6 dec)
 // ============================================================
 export function useTotalAssets() {
+  const { contracts, chainId } = useActiveChainContracts();
+
   const { data, isLoading } = useReadContract({
-    address: CONTRACTS.fundVault,
+    address: contracts.fundVault,
     abi: fundVaultAbi,
     functionName: "totalAssets",
-    chainId: sepolia.id,
+    chainId,
     query: { refetchInterval: REFETCH_INTERVAL },
   });
 
@@ -209,28 +233,30 @@ const IERC20_BALANCE = [
 ] as const;
 
 export function usePortfolioAllocation() {
+  const { contracts, chainId } = useActiveChainContracts();
+
   const { data, isLoading } = useReadContracts({
     contracts: [
       {
-        address: CONTRACTS.mockUSDC,
+        address: contracts.mockUSDC,
         abi: IERC20_BALANCE,
         functionName: "balanceOf",
-        args: [CONTRACTS.fundVault],
-        chainId: sepolia.id,
+        args: [contracts.fundVault],
+        chainId,
       },
       {
-        address: CONTRACTS.mockAavePool,
+        address: contracts.mockAavePool,
         abi: IERC20_BALANCE,
         functionName: "balanceOf",
-        args: [CONTRACTS.fundVault],
-        chainId: sepolia.id,
+        args: [contracts.fundVault],
+        chainId,
       },
       {
-        address: CONTRACTS.mockCompoundReserve,
+        address: contracts.mockCompoundReserve,
         abi: IERC20_BALANCE,
         functionName: "balanceOf",
-        args: [CONTRACTS.fundVault],
-        chainId: sepolia.id,
+        args: [contracts.fundVault],
+        chainId,
       },
     ],
     query: { refetchInterval: REFETCH_INTERVAL },

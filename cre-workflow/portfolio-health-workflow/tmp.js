@@ -18927,12 +18927,15 @@ class FirebaseClient {
     };
   }
 }
-var configSchema = exports_external.object({
-  schedule: exports_external.string(),
+var evmChainSchema = exports_external.object({
+  chainName: exports_external.string(),
   fundVaultAddress: exports_external.string(),
   riskOracleAddress: exports_external.string(),
-  chainSelectorName: exports_external.string(),
-  gasLimit: exports_external.string(),
+  gasLimit: exports_external.string()
+});
+var configSchema = exports_external.object({
+  schedule: exports_external.string(),
+  evms: exports_external.array(evmChainSchema),
   riskThresholds: exports_external.object({
     low: exports_external.number(),
     medium: exports_external.number(),
@@ -18943,14 +18946,14 @@ var configSchema = exports_external.object({
   firebaseApiKey: exports_external.string(),
   firebaseProjectId: exports_external.string()
 });
-var getTotalAssets = (runtime2) => {
+var getTotalAssets = (runtime2, chain) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const callData = encodeFunctionData({
@@ -18960,7 +18963,7 @@ var getTotalAssets = (runtime2) => {
   const contractCall = evmClient.callContract(runtime2, {
     call: encodeCallMsg({
       from: zeroAddress,
-      to: runtime2.config.fundVaultAddress,
+      to: chain.fundVaultAddress,
       data: callData
     }),
     blockNumber: LAST_FINALIZED_BLOCK_NUMBER
@@ -18972,14 +18975,14 @@ var getTotalAssets = (runtime2) => {
   });
   return totalAssets;
 };
-var getCurrentRiskScore = (runtime2) => {
+var getCurrentRiskScore = (runtime2, chain) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const callData = encodeFunctionData({
@@ -18989,7 +18992,7 @@ var getCurrentRiskScore = (runtime2) => {
   const contractCall = evmClient.callContract(runtime2, {
     call: encodeCallMsg({
       from: zeroAddress,
-      to: runtime2.config.riskOracleAddress,
+      to: chain.riskOracleAddress,
       data: callData
     }),
     blockNumber: LAST_FINALIZED_BLOCK_NUMBER
@@ -18999,7 +19002,7 @@ var getCurrentRiskScore = (runtime2) => {
     functionName: "getCurrentRiskScore",
     data: bytesToHex(contractCall.data)
   });
-  return result[0];
+  return BigInt(result[0]);
 };
 var calculateRiskScore = (runtime2, portfolioData) => {
   const logger = new StructuredLogger(runtime2);
@@ -19041,18 +19044,21 @@ function extractRiskScoreFromAnalysis(analysis, portfolioSize) {
     return 45;
   return 55;
 }
-var updateRiskOracle = (runtime2, newRiskScore, ipfsHash) => {
+var updateRiskOracle = (runtime2, chain, newRiskScore, ipfsHash) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const logger = new StructuredLogger(runtime2);
-  logger.info("Updating RiskOracle", { newRiskScore, ipfsHash });
+  logger.info(`Updating RiskOracle on ${chain.chainName}`, {
+    newRiskScore,
+    ipfsHash
+  });
   const callData = encodeFunctionData({
     abi: RiskOracleAbi,
     functionName: "updateRiskScore",
@@ -19065,31 +19071,45 @@ var updateRiskOracle = (runtime2, newRiskScore, ipfsHash) => {
     hashingAlgo: "keccak256"
   }).result();
   const resp = evmClient.writeReport(runtime2, {
-    receiver: runtime2.config.riskOracleAddress,
+    receiver: chain.riskOracleAddress,
     report: reportResponse,
     gasConfig: {
-      gasLimit: runtime2.config.gasLimit
+      gasLimit: chain.gasLimit
     }
   }).result();
   if (resp.txStatus !== TxStatus.SUCCESS) {
-    throw new Error(`Failed to update RiskOracle: ${resp.errorMessage || resp.txStatus}`);
+    throw new Error(`Failed to update RiskOracle on ${chain.chainName}: ${resp.errorMessage || resp.txStatus}`);
   }
   const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
-  logger.success("RiskOracle updated", { txHash });
+  logger.success(`RiskOracle updated on ${chain.chainName}`, { txHash });
   return txHash;
 };
 var runPortfolioHealthWorkflow = async (runtime2) => {
   const logger = new StructuredLogger(runtime2);
-  logger.info("\uD83D\uDE80 Starting Production Portfolio Health Monitoring");
+  logger.info(`\uD83D\uDE80 Starting Multi-chain Portfolio Health Monitoring (${runtime2.config.evms.length} chains)`);
   return withErrorHandling(async () => {
-    const totalAssets = getTotalAssets(runtime2);
-    const currentScore = getCurrentRiskScore(runtime2);
-    logger.info("Portfolio data retrieved", {
-      totalAssets: `$${(Number(totalAssets) / 1e6).toLocaleString()}`,
-      currentScore: Number(currentScore)
+    let aggregatedTotalAssets = BigInt(0);
+    let weightedRiskScore = BigInt(0);
+    const chainData = [];
+    for (const chain of runtime2.config.evms) {
+      const totalAssets = getTotalAssets(runtime2, chain);
+      const riskScore = getCurrentRiskScore(runtime2, chain);
+      chainData.push({ chain, totalAssets, riskScore });
+      aggregatedTotalAssets += totalAssets;
+      weightedRiskScore += riskScore * totalAssets;
+      logger.info(`Chain ${chain.chainName} data`, {
+        totalAssets: `$${(Number(totalAssets) / 1e6).toLocaleString()}`,
+        riskScore: Number(riskScore)
+      });
+    }
+    const currentScore = aggregatedTotalAssets > BigInt(0) ? weightedRiskScore / aggregatedTotalAssets : BigInt(0);
+    logger.info("Aggregated portfolio data", {
+      totalAssets: `$${(Number(aggregatedTotalAssets) / 1e6).toLocaleString()}`,
+      weightedRiskScore: Number(currentScore),
+      chains: runtime2.config.evms.length
     });
     const riskAnalysis = calculateRiskScore(runtime2, {
-      totalAssets,
+      totalAssets: aggregatedTotalAssets,
       currentRiskScore: currentScore
     });
     const scoreDiff = Math.abs(Number(currentScore) - riskAnalysis.riskScore);
@@ -19104,18 +19124,28 @@ var runPortfolioHealthWorkflow = async (runtime2) => {
     const ipfsHash = firebase.uploadRiskReport(runtime2, {
       timestamp: Date.now(),
       riskScore: riskAnalysis.riskScore,
-      totalAssets: `$${Number(totalAssets) / 1e6}`,
+      totalAssets: `$${Number(aggregatedTotalAssets) / 1e6}`,
       analysis: riskAnalysis.analysis,
-      recommendations: riskAnalysis.recommendations
+      recommendations: riskAnalysis.recommendations,
+      chains: chainData.map((cd) => ({
+        chainName: cd.chain.chainName,
+        totalAssets: `$${Number(cd.totalAssets) / 1e6}`,
+        riskScore: Number(cd.riskScore)
+      }))
     });
     logger.success("Risk report uploaded to Firebase", { ipfsHash });
-    const txHash = updateRiskOracle(runtime2, riskAnalysis.riskScore, ipfsHash);
-    logger.success("✅ Portfolio Health Monitoring Complete", {
-      txHash,
+    const txHashes = [];
+    for (const chain of runtime2.config.evms) {
+      const txHash = updateRiskOracle(runtime2, chain, riskAnalysis.riskScore, ipfsHash);
+      txHashes.push(txHash);
+    }
+    logger.success("✅ Multi-chain Portfolio Health Monitoring Complete", {
+      txHashes,
       ipfsHash,
-      newRiskScore: riskAnalysis.riskScore
+      newRiskScore: riskAnalysis.riskScore,
+      chainsUpdated: runtime2.config.evms.length
     });
-    return txHash;
+    return txHashes.join(",");
   }, { operation: "Portfolio Health Monitoring", runtime: runtime2 });
 };
 var eventAbi = parseAbi([
@@ -19130,23 +19160,25 @@ var onLogTrigger = async (runtime2, log) => {
   return runPortfolioHealthWorkflow(runtime2);
 };
 var initWorkflow = (config) => {
-  const network248 = getNetwork({
-    chainFamily: "evm",
-    chainSelectorName: config.chainSelectorName,
-    isTestnet: true
-  });
-  if (!network248) {
-    throw new Error(`Network not found: ${config.chainSelectorName}`);
-  }
-  const evmClient = new cre.capabilities.EVMClient(network248.chainSelector.selector);
   const analysisEventHash = keccak256(toHex(eventSignature));
-  return [
-    cre.handler(evmClient.logTrigger({
-      addresses: [config.fundVaultAddress],
+  const handlers = [];
+  for (const chain of config.evms) {
+    const network248 = getNetwork({
+      chainFamily: "evm",
+      chainSelectorName: chain.chainName,
+      isTestnet: true
+    });
+    if (!network248) {
+      throw new Error(`Network not found: ${chain.chainName}`);
+    }
+    const evmClient = new cre.capabilities.EVMClient(network248.chainSelector.selector);
+    handlers.push(cre.handler(evmClient.logTrigger({
+      addresses: [chain.fundVaultAddress],
       topics: [{ values: [analysisEventHash] }],
       confidence: "CONFIDENCE_LEVEL_FINALIZED"
-    }), onLogTrigger)
-  ];
+    }), onLogTrigger));
+  }
+  return handlers;
 };
 async function main() {
   const runner = await Runner.newRunner({

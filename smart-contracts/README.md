@@ -36,6 +36,9 @@ This directory contains four core contracts that work together to create a compl
 - Compliance-gated deposits, withdrawals, and transfers
 - Risk-aware operations (blocks deposits if risk > 85)
 - Reserve-aware (blocks operations if under-collateralized)
+- **CCIP-native token** — registered as a Chainlink CCIP burn/mint token for cross-chain share transfers
+- `bridgeShares()` sends shares cross-chain via CCIP Router
+- `getBridgeFee()` estimates bridge costs for the frontend
 
 ### Contract Dependencies
 
@@ -63,15 +66,20 @@ src/
 │   ├── ComplianceRegistry.sol      # KYC/sanctions tracking
 │   ├── RiskOracle.sol              # AI risk monitoring
 │   ├── ProofOfReserveOracle.sol    # Reserve verification
-│   └── FundVault.sol               # Main fund contract
+│   └── FundVault.sol               # Main fund contract (CCIP-enabled)
 ├── interfaces/
 │   ├── IComplianceRegistry.sol
 │   ├── IRiskOracle.sol
 │   ├── IProofOfReserveOracle.sol
 │   ├── IFundVault.sol
 │   └── IReceiverContracts.sol      # CRE receiver interface
-└── mock/
-    └── MockUSDC.sol                # Testing token (6 decimals)
+├── mock/
+│   ├── MockUSDC.sol                # Testing token (6 decimals)
+│   ├── MockAavePool.sol            # Mock Aave lending pool
+│   └── MockCompoundReserve.sol     # Mock Compound reserve
+script/
+├── DeployWatchtower.s.sol          # Full deployment script
+└── RegisterFundVaultCCIP.s.sol     # CCIP registration (pool + admin + remote config)
 ```
 
 ## 🚀 Quick Start
@@ -108,8 +116,10 @@ Each contract implements role-based access control:
 |                          | `CRE_WORKFLOW_ROLE`       | Batch updates from CRE     |
 | **RiskOracle**           | `CRE_WORKFLOW_ROLE`       | Update risk scores         |
 | **ProofOfReserveOracle** | `CRE_WORKFLOW_ROLE`       | Update reserve data        |
-| **FundVault**            | `FUND_MANAGER_ROLE`       | Rebalancing operations     |
-|                          | `CRE_WORKFLOW_ROLE`       | Update total assets        |
+| **FundVault**            | `FUND_MANAGER_ROLE`       | Rebalancing, bridge shares |
+|                          | `CRE_WORKFLOW_ROLE`       | Update total assets, bridge|
+|                          | `MINTER_ROLE`             | Mint shares (CCIP pool)    |
+|                          | `BURNER_ROLE`             | Burn shares (CCIP pool)    |
 | **All**                  | `DEFAULT_ADMIN_ROLE`      | Pause/unpause, grant roles |
 
 ## 💡 Key Features

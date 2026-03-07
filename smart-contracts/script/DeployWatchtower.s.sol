@@ -33,6 +33,7 @@ contract DeployWatchtower is Script {
     address public complianceOfficer;
     address public fundManager;
     address public creWorkflow; // CRE workflow address (initially deployer, can be updated later)
+    address public ccipRouter; // CCIP Router address for the target chain
 
     function setUp() public {
         // Load addresses from environment or use deployer as default
@@ -40,12 +41,17 @@ contract DeployWatchtower is Script {
         complianceOfficer = vm.envOr("COMPLIANCE_OFFICER_ADDRESS", msg.sender);
         fundManager = vm.envOr("FUND_MANAGER_ADDRESS", msg.sender);
         creWorkflow = vm.envOr("CRE_WORKFLOW_ADDRESS", msg.sender);
+        // CCIP Router addresses:
+        //   Sepolia:      0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59
+        //   Base Sepolia:  0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93
+        ccipRouter = vm.envOr("CCIP_ROUTER_ADDRESS", address(0));
 
         console.log("=== Deployment Configuration ===");
         console.log("Admin:", admin);
         console.log("Compliance Officer:", complianceOfficer);
         console.log("Fund Manager:", fundManager);
         console.log("CRE Workflow:", creWorkflow);
+        console.log("CCIP Router:", ccipRouter);
         console.log("Deployer:", msg.sender);
         console.log("");
     }
@@ -149,8 +155,19 @@ contract DeployWatchtower is Script {
         }
         console.log("");
 
-        // ============ Step 5: Initialize Risk Oracle ============
-        console.log("Step 5: Initializing Risk Oracle...");
+        // ============ Step 5: Set CCIP Router ============
+        console.log("Step 5: Setting CCIP Router on FundVault...");
+        if (ccipRouter != address(0)) {
+            fundVault.setCCIPRouter(ccipRouter);
+            console.log("  -> CCIP Router set to:", ccipRouter);
+        } else {
+            console.log("  -> Skipping (CCIP_ROUTER_ADDRESS not set)");
+            console.log("  -> Set later via: fundVault.setCCIPRouter(routerAddr)");
+        }
+        console.log("");
+
+        // ============ Step 6: Initialize Risk Oracle ============
+        console.log("Step 6: Initializing Risk Oracle...");
         if (msg.sender == creWorkflow || msg.sender == admin) {
             // Set initial low risk score
             riskOracle.updateRiskScore(20, "QmInitialDeployment");
@@ -162,8 +179,8 @@ contract DeployWatchtower is Script {
         }
         console.log("");
 
-        // ============ Step 6: Initialize Proof of Reserve Oracle ============
-        console.log("Step 6: Initializing Proof of Reserve Oracle...");
+        // ============ Step 7: Initialize Proof of Reserve Oracle ============
+        console.log("Step 7: Initializing Proof of Reserve Oracle...");
         if (msg.sender == creWorkflow || msg.sender == admin) {
             // Set initial reserves (0 since no deposits yet)
             porOracle.updateReserves(0, 0, 0);
@@ -194,6 +211,9 @@ contract DeployWatchtower is Script {
         console.log("");
         console.log("Core Contracts:");
         console.log("  FundVault:", address(fundVault));
+        console.log("");
+        console.log("CCIP:");
+        console.log("  Router:", ccipRouter);
         console.log("");
         console.log("Configuration:");
         console.log("  Admin:", admin);

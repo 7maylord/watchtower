@@ -28,12 +28,16 @@ import { FirebaseClient } from "./firebase";
 import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
-const configSchema = z.object({
-  schedule: z.string(),
+const evmChainSchema = z.object({
+  chainName: z.string(),
   fundVaultAddress: z.string(),
   riskOracleAddress: z.string(),
-  chainSelectorName: z.string(),
   gasLimit: z.string(),
+});
+
+const configSchema = z.object({
+  schedule: z.string(),
+  evms: z.array(evmChainSchema),
   rebalancingThresholds: z.object({
     minRiskScore: z.number(),
     minPortfolioSize: z.number(),
@@ -44,6 +48,7 @@ const configSchema = z.object({
 });
 
 type Config = z.infer<typeof configSchema>;
+type EVMChain = z.infer<typeof evmChainSchema>;
 
 /**
  * PRODUCTION Rebalancing Advisor Workflow
@@ -57,6 +62,7 @@ type Config = z.infer<typeof configSchema>;
  */
 const getPortfolioData = (
   runtime: Runtime<Config>,
+  chain: EVMChain,
 ): {
   totalAssets: bigint;
   totalShares: bigint;
@@ -64,14 +70,12 @@ const getPortfolioData = (
 } => {
   const network = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true,
   });
 
   if (!network) {
-    throw new Error(
-      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
-    );
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
@@ -86,7 +90,7 @@ const getPortfolioData = (
     .callContract(runtime, {
       call: encodeCallMsg({
         from: zeroAddress,
-        to: runtime.config.fundVaultAddress as Address,
+        to: chain.fundVaultAddress as Address,
         data: assetsCallData,
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
@@ -109,7 +113,7 @@ const getPortfolioData = (
     .callContract(runtime, {
       call: encodeCallMsg({
         from: zeroAddress,
-        to: runtime.config.fundVaultAddress as Address,
+        to: chain.fundVaultAddress as Address,
         data: sharesCallData,
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
@@ -132,7 +136,7 @@ const getPortfolioData = (
     .callContract(runtime, {
       call: encodeCallMsg({
         from: zeroAddress,
-        to: runtime.config.fundVaultAddress as Address,
+        to: chain.fundVaultAddress as Address,
         data: priceCallData,
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
@@ -151,17 +155,18 @@ const getPortfolioData = (
 /**
  * Get current risk score
  */
-const getCurrentRiskScore = (runtime: Runtime<Config>): number => {
+const getCurrentRiskScore = (
+  runtime: Runtime<Config>,
+  chain: EVMChain,
+): number => {
   const network = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true,
   });
 
   if (!network) {
-    throw new Error(
-      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
-    );
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
@@ -175,7 +180,7 @@ const getCurrentRiskScore = (runtime: Runtime<Config>): number => {
     .callContract(runtime, {
       call: encodeCallMsg({
         from: zeroAddress,
-        to: runtime.config.riskOracleAddress as Address,
+        to: chain.riskOracleAddress as Address,
         data: callData,
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
@@ -282,20 +287,26 @@ const runRebalancingAdvisoryWorkflow = async (
 ): Promise<string> => {
   const logger = new StructuredLogger(runtime);
 
-  logger.info("🚀 Starting Production Rebalancing Advisory Analysis");
+  logger.info(
+    `🚀 Starting Multi-chain Rebalancing Advisory Analysis (${runtime.config.evms.length} chains)`,
+  );
 
   return withErrorHandling(
     async () => {
-      // Step 1: Get portfolio data
-      const portfolioData = getPortfolioData(runtime);
+      // Use first chain as primary for portfolio data (can be aggregated later)
+      const primaryChain = runtime.config.evms[0];
+
+      // Step 1: Get portfolio data from primary chain
+      const portfolioData = getPortfolioData(runtime, primaryChain);
       const assetsInUSDC = Number(portfolioData.totalAssets) / 1e6;
 
       logger.info("Portfolio data retrieved", {
         totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+        chain: primaryChain.chainName,
       });
 
-      // Step 2: Get current risk score
-      const riskScore = getCurrentRiskScore(runtime);
+      // Step 2: Get current risk score from primary chain
+      const riskScore = getCurrentRiskScore(runtime, primaryChain);
 
       logger.info("Current risk score", { riskScore });
 
@@ -338,71 +349,65 @@ const runRebalancingAdvisoryWorkflow = async (
 
       logger.success("Advisory report uploaded", { ipfsHash });
 
-      // Step 5: Execute on-chain rebalance if recommended
+      // Step 5: Execute on-chain rebalance on ALL chains if recommended
       if (advice.shouldRebalance) {
-        logger.info(
-          "⚡ Executing on-chain rebalance via FundVault.rebalance()",
-        );
+        for (const chain of runtime.config.evms) {
+          logger.info(`⚡ Executing on-chain rebalance on ${chain.chainName}`);
 
-        const network = getNetwork({
-          chainFamily: "evm",
-          chainSelectorName: runtime.config.chainSelectorName,
-          isTestnet: true,
-        });
-
-        if (!network) {
-          throw new Error("Network not found for rebalance execution");
-        }
-
-        const evmClient = new EVMClient(network.chainSelector.selector);
-
-        // Encode the rebalance call
-        // The FundVault contract will check: risk >= rebalanceRiskThreshold
-        // If risk is too low, the tx will revert on-chain — this is the safety gate
-        const rebalanceCallData = encodeFunctionData({
-          abi: FundVaultAbi,
-          functionName: "rebalance",
-          args: [
-            ipfsHash, // strategy IPFS hash
-            BigInt(0), // aaveSupplyAmount (advisory only for now)
-            BigInt(0), // aaveWithdrawAmount
-            BigInt(0), // compSupplyAmount
-            BigInt(0), // compWithdrawAmount
-          ],
-        });
-
-        const reportResponse = runtime
-          .report({
-            encodedPayload: hexToBase64(rebalanceCallData),
-            encoderName: "evm",
-            signingAlgo: "ecdsa",
-            hashingAlgo: "keccak256",
-          })
-          .result();
-
-        const resp = evmClient
-          .writeReport(runtime, {
-            receiver: runtime.config.fundVaultAddress,
-            report: reportResponse,
-            gasConfig: {
-              gasLimit: runtime.config.gasLimit,
-            },
-          })
-          .result();
-
-        if (resp.txStatus !== TxStatus.SUCCESS) {
-          logger.warn("Rebalance tx failed (risk may be below threshold)", {
-            error: resp.errorMessage || resp.txStatus,
+          const network = getNetwork({
+            chainFamily: "evm",
+            chainSelectorName: chain.chainName,
+            isTestnet: true,
           });
-        } else {
-          const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
-          logger.success("✅ On-chain rebalance executed", { txHash });
+
+          if (!network) {
+            logger.warn(`Network not found for ${chain.chainName}, skipping`);
+            continue;
+          }
+
+          const evmClient = new EVMClient(network.chainSelector.selector);
+
+          const rebalanceCallData = encodeFunctionData({
+            abi: FundVaultAbi,
+            functionName: "rebalance",
+            args: [ipfsHash, BigInt(0), BigInt(0), BigInt(0), BigInt(0)],
+          });
+
+          const reportResponse = runtime
+            .report({
+              encodedPayload: hexToBase64(rebalanceCallData),
+              encoderName: "evm",
+              signingAlgo: "ecdsa",
+              hashingAlgo: "keccak256",
+            })
+            .result();
+
+          const resp = evmClient
+            .writeReport(runtime, {
+              receiver: chain.fundVaultAddress,
+              report: reportResponse,
+              gasConfig: {
+                gasLimit: chain.gasLimit,
+              },
+            })
+            .result();
+
+          if (resp.txStatus !== TxStatus.SUCCESS) {
+            logger.warn(`Rebalance tx failed on ${chain.chainName}`, {
+              error: resp.errorMessage || resp.txStatus,
+            });
+          } else {
+            const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
+            logger.success(`✅ Rebalance executed on ${chain.chainName}`, {
+              txHash,
+            });
+          }
         }
       } else {
         logger.success("✅ No rebalancing needed at this time");
       }
 
-      logger.success("✅ Rebalancing Analysis Complete", {
+      logger.success("✅ Multi-chain Rebalancing Analysis Complete", {
         ipfsHash,
         recommendation: advice.recommendation,
       });
@@ -446,31 +451,37 @@ const onLogTrigger = async (
  * Initialize workflow — listens for RebalanceRequested events from FundVault
  */
 const initWorkflow = (config: Config) => {
-  const network = getNetwork({
-    chainFamily: "evm",
-    chainSelectorName: config.chainSelectorName,
-    isTestnet: true,
-  });
+  const rebalanceEventHash = keccak256(toHex(eventSignature));
+  const handlers = [];
 
-  if (!network) {
-    throw new Error(`Network not found: ${config.chainSelectorName}`);
+  for (const chain of config.evms) {
+    const network = getNetwork({
+      chainFamily: "evm",
+      chainSelectorName: chain.chainName,
+      isTestnet: true,
+    });
+
+    if (!network) {
+      throw new Error(`Network not found: ${chain.chainName}`);
+    }
+
+    const evmClient = new cre.capabilities.EVMClient(
+      network.chainSelector.selector,
+    );
+
+    handlers.push(
+      cre.handler(
+        evmClient.logTrigger({
+          addresses: [chain.fundVaultAddress],
+          topics: [{ values: [rebalanceEventHash] }],
+          confidence: "CONFIDENCE_LEVEL_FINALIZED",
+        }),
+        onLogTrigger,
+      ),
+    );
   }
 
-  const evmClient = new cre.capabilities.EVMClient(
-    network.chainSelector.selector,
-  );
-  const rebalanceEventHash = keccak256(toHex(eventSignature));
-
-  return [
-    cre.handler(
-      evmClient.logTrigger({
-        addresses: [config.fundVaultAddress],
-        topics: [{ values: [rebalanceEventHash] }],
-        confidence: "CONFIDENCE_LEVEL_FINALIZED",
-      }),
-      onLogTrigger,
-    ),
-  ];
+  return handlers;
 };
 
 /**

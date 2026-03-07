@@ -1,1061 +1,1352 @@
 export const fundVaultAbi = [
   {
-    type: "constructor",
-    inputs: [
+    "type": "constructor",
+    "inputs": [
       {
-        name: "name_",
-        type: "string",
-        internalType: "string",
+        "name": "name_",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: "symbol_",
-        type: "string",
-        internalType: "string",
+        "name": "symbol_",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: "underlyingAsset_",
-        type: "address",
-        internalType: "address",
+        "name": "underlyingAsset_",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "complianceRegistry_",
-        type: "address",
-        internalType: "address",
+        "name": "complianceRegistry_",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "riskOracle_",
-        type: "address",
-        internalType: "address",
+        "name": "riskOracle_",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "porOracle_",
-        type: "address",
-        internalType: "address",
+        "name": "porOracle_",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "admin",
-        type: "address",
-        internalType: "address",
+        "name": "admin",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "fundManager",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "fundManager",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "nonpayable",
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "CRE_WORKFLOW_ROLE",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "BURNER_ROLE",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "DEFAULT_ADMIN_ROLE",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "CRE_WORKFLOW_ROLE",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "FUND_MANAGER_ROLE",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "DEFAULT_ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "aToken",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "FUND_MANAGER_ROLE",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "contract IERC20",
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "aavePool",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "MINTER_ROLE",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "contract IMockAavePool",
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "allowance",
-    inputs: [
+    "type": "function",
+    "name": "aToken",
+    "inputs": [],
+    "outputs": [
       {
-        name: "owner",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "aavePool",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IMockAavePool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "allowance",
+    "inputs": [
       {
-        name: "spender",
-        type: "address",
-        internalType: "address",
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "spender",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "approve",
+    "inputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "spender",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "asset",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "balanceOf",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "approve",
-    inputs: [
+    "type": "function",
+    "name": "bridgeShares",
+    "inputs": [
       {
-        name: "spender",
-        type: "address",
-        internalType: "address",
+        "name": "destChainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
-        name: "value",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "receiver",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "messageId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: "nonpayable",
+    "stateMutability": "payable"
   },
   {
-    type: "function",
-    name: "asset",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "burn",
+    "inputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "balanceOf",
-    inputs: [
+    "type": "function",
+    "name": "burnFrom",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        internalType: "address",
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "cToken",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "contract IERC20"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "cToken",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "ccipRouter",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "contract IERC20",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "contract IRouterClient"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "compoundReserve",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "compoundReserve",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "contract IMockCompoundReserve",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "contract IMockCompoundReserve"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "decimals",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "decimals",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint8",
-        internalType: "uint8",
-      },
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "deposit",
-    inputs: [
+    "type": "function",
+    "name": "deposit",
+    "inputs": [
       {
-        name: "amount",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "shares",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "emergencyWithdraw",
+    "inputs": [
       {
-        name: "shares",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "emergencyWithdraw",
-    inputs: [
+    "type": "function",
+    "name": "getBridgeFee",
+    "inputs": [
       {
-        name: "to",
-        type: "address",
-        internalType: "address",
+        "name": "destChainSelector",
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
-        name: "amount",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "receiver",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [
+      {
+        "name": "fee",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "getRoleAdmin",
-    inputs: [
+    "type": "function",
+    "name": "getCCIPAdmin",
+    "inputs": [],
+    "outputs": [
       {
-        name: "role",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getRoleAdmin",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "grantRole",
-    inputs: [
+    "type": "function",
+    "name": "grantMintAndBurnRoles",
+    "inputs": [
       {
-        name: "role",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
+        "name": "burnAndMinter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "grantRole",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        internalType: "address",
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "hasRole",
-    inputs: [
+    "type": "function",
+    "name": "hasRole",
+    "inputs": [
       {
-        name: "role",
-        type: "bytes32",
-        internalType: "bytes32",
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
       {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "name",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "mint",
+    "inputs": [
       {
-        name: "",
-        type: "string",
-        internalType: "string",
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "name",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "pause",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "pause",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "paused",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "paused",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "rebalance",
-    inputs: [
+    "type": "function",
+    "name": "rebalance",
+    "inputs": [
       {
-        name: "strategy",
-        type: "string",
-        internalType: "string",
+        "name": "strategy",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        name: "aaveSupplyAmount",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "aaveSupplyAmount",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "aaveWithdrawAmount",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "aaveWithdrawAmount",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "compSupplyAmount",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "compSupplyAmount",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "compWithdrawAmount",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "compWithdrawAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "rebalanceRiskThreshold",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "rebalanceRiskThreshold",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint8",
-        internalType: "uint8",
-      },
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "renounceRole",
-    inputs: [
+    "type": "function",
+    "name": "renounceRole",
+    "inputs": [
       {
-        name: "role",
-        type: "bytes32",
-        internalType: "bytes32",
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
       {
-        name: "callerConfirmation",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "callerConfirmation",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "requestAnalysis",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "requestRebalance",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "revokeRole",
-    inputs: [
+    "type": "function",
+    "name": "revokeRole",
+    "inputs": [
       {
-        name: "role",
-        type: "bytes32",
-        internalType: "bytes32",
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
       {
-        name: "account",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "setMockProtocols",
-    inputs: [
+    "type": "function",
+    "name": "setCCIPAdmin",
+    "inputs": [
       {
-        name: "_aavePool",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "newAdmin",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setCCIPRouter",
+    "inputs": [
+      {
+        "name": "router",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setMockProtocols",
+    "inputs": [
       {
-        name: "_aToken",
-        type: "address",
-        internalType: "address",
+        "name": "_aavePool",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "_compoundReserve",
-        type: "address",
-        internalType: "address",
+        "name": "_aToken",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "_cToken",
-        type: "address",
-        internalType: "address",
+        "name": "_compoundReserve",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "_cToken",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "setRebalanceRiskThreshold",
-    inputs: [
+    "type": "function",
+    "name": "setRebalanceRiskThreshold",
+    "inputs": [
       {
-        name: "newThreshold",
-        type: "uint8",
-        internalType: "uint8",
-      },
+        "name": "newThreshold",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "sharePrice",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "sharePrice",
+    "inputs": [],
+    "outputs": [
       {
-        name: "price",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "price",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "supportsInterface",
-    inputs: [
+    "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
       {
-        name: "interfaceId",
-        type: "bytes4",
-        internalType: "bytes4",
-      },
+        "name": "interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "symbol",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "symbol",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "string",
-        internalType: "string",
-      },
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "totalAssets",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "totalAssets",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "totalSupply",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "totalSupply",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "transfer",
-    inputs: [
+    "type": "function",
+    "name": "transfer",
+    "inputs": [
       {
-        name: "to",
-        type: "address",
-        internalType: "address",
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "value",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "nonpayable",
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "transferFrom",
-    inputs: [
+    "type": "function",
+    "name": "transferFrom",
+    "inputs": [
       {
-        name: "from",
-        type: "address",
-        internalType: "address",
+        "name": "from",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "to",
-        type: "address",
-        internalType: "address",
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "value",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "nonpayable",
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "unpause",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "unpause",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "requestAnalysis",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "withdraw",
+    "inputs": [
+      {
+        "name": "shares",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "requestRebalance",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "event",
+    "name": "AnalysisRequested",
+    "inputs": [
+      {
+        "name": "requester",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
-    type: "function",
-    name: "withdraw",
-    inputs: [
+    "type": "event",
+    "name": "Approval",
+    "inputs": [
       {
-        name: "shares",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "owner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
-    ],
-    outputs: [
       {
-        name: "amount",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "spender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
+      {
+        "name": "value",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "nonpayable",
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Approval",
-    inputs: [
+    "type": "event",
+    "name": "CCIPAdminTransferred",
+    "inputs": [
       {
-        name: "owner",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "previousAdmin",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "spender",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "newAdmin",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Deposited",
+    "inputs": [
+      {
+        "name": "investor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "value",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       },
+      {
+        "name": "shares",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Deposited",
-    inputs: [
+    "type": "event",
+    "name": "EmergencyWithdrawal",
+    "inputs": [
       {
-        name: "investor",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Paused",
+    "inputs": [
       {
-        name: "shares",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "EmergencyWithdrawal",
-    inputs: [
+    "type": "event",
+    "name": "RebalanceRequested",
+    "inputs": [
       {
-        name: "to",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "requester",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Paused",
-    inputs: [
+    "type": "event",
+    "name": "RebalanceRiskThresholdUpdated",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        indexed: false,
-        internalType: "address",
+        "name": "oldThreshold",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
       },
+      {
+        "name": "newThreshold",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "RebalanceRiskThresholdUpdated",
-    inputs: [
+    "type": "event",
+    "name": "Rebalanced",
+    "inputs": [
       {
-        name: "oldThreshold",
-        type: "uint8",
-        indexed: false,
-        internalType: "uint8",
+        "name": "strategy",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
       },
       {
-        name: "newThreshold",
-        type: "uint8",
-        indexed: false,
-        internalType: "uint8",
-      },
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Rebalanced",
-    inputs: [
+    "type": "event",
+    "name": "RoleAdminChanged",
+    "inputs": [
       {
-        name: "strategy",
-        type: "string",
-        indexed: false,
-        internalType: "string",
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
       },
       {
-        name: "timestamp",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
+        "name": "previousAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
       },
+      {
+        "name": "newAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "RoleAdminChanged",
-    inputs: [
+    "type": "event",
+    "name": "RoleGranted",
+    "inputs": [
       {
-        name: "role",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
       },
       {
-        name: "previousAdminRole",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "newAdminRole",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
-      },
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "RoleGranted",
-    inputs: [
+    "type": "event",
+    "name": "RoleRevoked",
+    "inputs": [
       {
-        name: "role",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
       },
       {
-        name: "account",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "sender",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "RoleRevoked",
-    inputs: [
+    "type": "event",
+    "name": "SharesBridged",
+    "inputs": [
       {
-        name: "role",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
+        "name": "destinationChainSelector",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
       },
       {
-        name: "account",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "receiver",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "sender",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       },
+      {
+        "name": "messageId",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Transfer",
-    inputs: [
+    "type": "event",
+    "name": "Transfer",
+    "inputs": [
       {
-        name: "from",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "from",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "to",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "value",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "value",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Unpaused",
-    inputs: [
+    "type": "event",
+    "name": "Unpaused",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        indexed: false,
-        internalType: "address",
-      },
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Withdrawn",
-    inputs: [
+    "type": "event",
+    "name": "Withdrawn",
+    "inputs": [
       {
-        name: "investor",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "investor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "shares",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
+        "name": "shares",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       },
       {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "error",
-    name: "AccessControlBadConfirmation",
-    inputs: [],
+    "type": "error",
+    "name": "AccessControlBadConfirmation",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "AccessControlUnauthorizedAccount",
-    inputs: [
+    "type": "error",
+    "name": "AccessControlUnauthorizedAccount",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        internalType: "address",
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "neededRole",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-    ],
+        "name": "neededRole",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "ERC20InsufficientAllowance",
-    inputs: [
+    "type": "error",
+    "name": "ERC20InsufficientAllowance",
+    "inputs": [
       {
-        name: "spender",
-        type: "address",
-        internalType: "address",
+        "name": "spender",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "allowance",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "allowance",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "needed",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
+        "name": "needed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "ERC20InsufficientBalance",
-    inputs: [
+    "type": "error",
+    "name": "ERC20InsufficientBalance",
+    "inputs": [
       {
-        name: "sender",
-        type: "address",
-        internalType: "address",
+        "name": "sender",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "balance",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "balance",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "needed",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
+        "name": "needed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "ERC20InvalidApprover",
-    inputs: [
+    "type": "error",
+    "name": "ERC20InvalidApprover",
+    "inputs": [
       {
-        name: "approver",
-        type: "address",
-        internalType: "address",
-      },
-    ],
+        "name": "approver",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "ERC20InvalidReceiver",
-    inputs: [
+    "type": "error",
+    "name": "ERC20InvalidReceiver",
+    "inputs": [
       {
-        name: "receiver",
-        type: "address",
-        internalType: "address",
-      },
-    ],
+        "name": "receiver",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "ERC20InvalidSender",
-    inputs: [
+    "type": "error",
+    "name": "ERC20InvalidSender",
+    "inputs": [
       {
-        name: "sender",
-        type: "address",
-        internalType: "address",
-      },
-    ],
+        "name": "sender",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "ERC20InvalidSpender",
-    inputs: [
+    "type": "error",
+    "name": "ERC20InvalidSpender",
+    "inputs": [
       {
-        name: "spender",
-        type: "address",
-        internalType: "address",
-      },
-    ],
+        "name": "spender",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "EnforcedPause",
-    inputs: [],
+    "type": "error",
+    "name": "EnforcedPause",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "ExpectedPause",
-    inputs: [],
+    "type": "error",
+    "name": "ExpectedPause",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "InsufficientReserves",
-    inputs: [],
+    "type": "error",
+    "name": "InsufficientReserves",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "NotCompliant",
-    inputs: [],
+    "type": "error",
+    "name": "NotCompliant",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "RiskBelowThreshold",
-    inputs: [
+    "type": "error",
+    "name": "RiskBelowThreshold",
+    "inputs": [
       {
-        name: "currentRisk",
-        type: "uint8",
-        internalType: "uint8",
+        "name": "currentRisk",
+        "type": "uint8",
+        "internalType": "uint8"
       },
       {
-        name: "threshold",
-        type: "uint8",
-        internalType: "uint8",
-      },
-    ],
+        "name": "threshold",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ]
   },
   {
-    type: "error",
-    name: "RiskTooHigh",
-    inputs: [],
+    "type": "error",
+    "name": "RiskTooHigh",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "Unauthorized",
-    inputs: [],
+    "type": "error",
+    "name": "RouterNotSet",
+    "inputs": []
   },
+  {
+    "type": "error",
+    "name": "Unauthorized",
+    "inputs": []
+  }
 ] as const;

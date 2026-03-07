@@ -31,18 +31,23 @@ import { FirebaseClient } from "./firebase";
 import { StructuredLogger, withErrorHandling } from "./utils";
 
 // Configuration schema
-const configSchema = z.object({
-  schedule: z.string(),
+const evmChainSchema = z.object({
+  chainName: z.string(),
   proofOfReserveOracleAddress: z.string(),
   fundVaultAddress: z.string(),
   mockUSDCAddress: z.string(),
-  chainSelectorName: z.string(),
   gasLimit: z.string(),
+});
+
+const configSchema = z.object({
+  schedule: z.string(),
+  evms: z.array(evmChainSchema),
   firebaseApiKey: z.string(),
   firebaseProjectId: z.string(),
 });
 
 type Config = z.infer<typeof configSchema>;
+type EVMChain = z.infer<typeof evmChainSchema>;
 
 /**
  * PRODUCTION Proof of Reserve Workflow
@@ -52,19 +57,17 @@ type Config = z.infer<typeof configSchema>;
  */
 
 /**
- * Get total assets from FundVault
+ * Get total assets from FundVault on a specific chain
  */
-const getTotalAssets = (runtime: Runtime<Config>): bigint => {
+const getTotalAssets = (runtime: Runtime<Config>, chain: EVMChain): bigint => {
   const network = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true,
   });
 
   if (!network) {
-    throw new Error(
-      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
-    );
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
@@ -78,7 +81,7 @@ const getTotalAssets = (runtime: Runtime<Config>): bigint => {
     .callContract(runtime, {
       call: encodeCallMsg({
         from: zeroAddress,
-        to: runtime.config.fundVaultAddress as Address,
+        to: chain.fundVaultAddress as Address,
         data: callData,
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
@@ -95,19 +98,20 @@ const getTotalAssets = (runtime: Runtime<Config>): bigint => {
 };
 
 /**
- * Get actual USDC balance in FundVault
+ * Get actual USDC balance in FundVault on a specific chain
  */
-const getActualBalance = (runtime: Runtime<Config>): bigint => {
+const getActualBalance = (
+  runtime: Runtime<Config>,
+  chain: EVMChain,
+): bigint => {
   const network = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true,
   });
 
   if (!network) {
-    throw new Error(
-      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
-    );
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
@@ -115,14 +119,14 @@ const getActualBalance = (runtime: Runtime<Config>): bigint => {
   const callData = encodeFunctionData({
     abi: IERC20,
     functionName: "balanceOf",
-    args: [runtime.config.fundVaultAddress as Address],
+    args: [chain.fundVaultAddress as Address],
   });
 
   const contractCall = evmClient
     .callContract(runtime, {
       call: encodeCallMsg({
         from: zeroAddress,
-        to: runtime.config.mockUSDCAddress as Address,
+        to: chain.mockUSDCAddress as Address,
         data: callData,
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
@@ -139,19 +143,20 @@ const getActualBalance = (runtime: Runtime<Config>): bigint => {
 };
 
 /**
- * Get current reserves from ProofOfReserveOracle
+ * Get current reserves from ProofOfReserveOracle on a specific chain
  */
-const getCurrentReserves = (runtime: Runtime<Config>): bigint => {
+const getCurrentReserves = (
+  runtime: Runtime<Config>,
+  chain: EVMChain,
+): bigint => {
   const network = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true,
   });
 
   if (!network) {
-    throw new Error(
-      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
-    );
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
@@ -165,7 +170,7 @@ const getCurrentReserves = (runtime: Runtime<Config>): bigint => {
     .callContract(runtime, {
       call: encodeCallMsg({
         from: zeroAddress,
-        to: runtime.config.proofOfReserveOracleAddress as Address,
+        to: chain.proofOfReserveOracleAddress as Address,
         data: callData,
       }),
       blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
@@ -184,29 +189,28 @@ const getCurrentReserves = (runtime: Runtime<Config>): bigint => {
 };
 
 /**
- * Update ProofOfReserveOracle
+ * Update ProofOfReserveOracle on a specific chain
  */
 const updateReserves = (
   runtime: Runtime<Config>,
+  chain: EVMChain,
   totalReserves: bigint,
   reportHash: string,
 ): string => {
   const network = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true,
   });
 
   if (!network) {
-    throw new Error(
-      `Network not found for chain selector: ${runtime.config.chainSelectorName}`,
-    );
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
 
   const evmClient = new EVMClient(network.chainSelector.selector);
   const logger = new StructuredLogger(runtime);
 
-  logger.info("Updating ProofOfReserveOracle", {
+  logger.info(`Updating ProofOfReserveOracle on ${chain.chainName}`, {
     totalReserves: `$${(Number(totalReserves) / 1e6).toLocaleString()}`,
     reportHash,
   });
@@ -228,81 +232,104 @@ const updateReserves = (
 
   const resp = evmClient
     .writeReport(runtime, {
-      receiver: runtime.config.proofOfReserveOracleAddress,
+      receiver: chain.proofOfReserveOracleAddress,
       report: reportResponse,
       gasConfig: {
-        gasLimit: runtime.config.gasLimit,
+        gasLimit: chain.gasLimit,
       },
     })
     .result();
 
   if (resp.txStatus !== TxStatus.SUCCESS) {
     throw new Error(
-      `Failed to update ProofOfReserveOracle: ${resp.errorMessage || resp.txStatus}`,
+      `Failed to update ProofOfReserveOracle on ${chain.chainName}: ${resp.errorMessage || resp.txStatus}`,
     );
   }
 
   const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
-  logger.success("ProofOfReserveOracle updated", { txHash });
+  logger.success(`ProofOfReserveOracle updated on ${chain.chainName}`, {
+    txHash,
+  });
 
   return txHash;
 };
 
 /**
- * Main workflow logic
+ * Main workflow logic — aggregates reserves across all chains
  */
 const runProofOfReserveWorkflow = async (
   runtime: Runtime<Config>,
 ): Promise<string> => {
   const logger = new StructuredLogger(runtime);
 
-  logger.info("🚀 Starting Production Proof of Reserve Verification");
+  logger.info(
+    `🚀 Starting Multi-chain Proof of Reserve Verification (${runtime.config.evms.length} chains)`,
+  );
 
   return withErrorHandling(
     async () => {
-      // Step 1: Read total assets
-      const totalAssets = getTotalAssets(runtime);
-      const assetsInUSDC = Number(totalAssets) / 1e6;
+      let aggregatedAssets = BigInt(0);
+      let aggregatedBalance = BigInt(0);
+      const chainReports: {
+        chainName: string;
+        totalAssets: string;
+        balance: string;
+        ratio: string;
+      }[] = [];
 
-      logger.info("Total assets", {
-        totalAssets: `$${assetsInUSDC.toLocaleString()}`,
-      });
+      for (const chain of runtime.config.evms) {
+        // Step 1: Read total assets
+        const totalAssets = getTotalAssets(runtime, chain);
+        const assetsInUSDC = Number(totalAssets) / 1e6;
 
-      // Step 2: Get actual USDC balance
-      const actualBalance = getActualBalance(runtime);
-      const balanceInUSDC = Number(actualBalance) / 1e6;
+        // Step 2: Get actual USDC balance
+        const actualBalance = getActualBalance(runtime, chain);
+        const balanceInUSDC = Number(actualBalance) / 1e6;
 
-      logger.info("Actual USDC balance", {
-        balance: `$${balanceInUSDC.toLocaleString()}`,
-      });
+        let reserveRatio = 10000;
+        if (totalAssets > 0n) {
+          reserveRatio = Number((actualBalance * 10000n) / totalAssets);
+        }
 
-      // Step 3: Calculate total reserves (on-chain only for now)
-      const totalReserves = actualBalance;
-      const reservesInUSDC = Number(totalReserves) / 1e6;
+        aggregatedAssets += totalAssets;
+        aggregatedBalance += actualBalance;
 
-      logger.info("Total reserves", {
-        reserves: `$${reservesInUSDC.toLocaleString()}`,
-      });
+        chainReports.push({
+          chainName: chain.chainName,
+          totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+          balance: `$${balanceInUSDC.toLocaleString()}`,
+          ratio: `${(reserveRatio / 100).toFixed(2)}%`,
+        });
 
-      // Step 4: Calculate reserve ratio
-      let reserveRatio = 10000; // 100% in basis points
-      if (totalAssets > 0n) {
-        reserveRatio = Number((totalReserves * 10000n) / totalAssets);
+        logger.info(`Chain ${chain.chainName} reserves`, {
+          totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+          balance: `$${balanceInUSDC.toLocaleString()}`,
+          ratio: `${(reserveRatio / 100).toFixed(2)}%`,
+        });
       }
 
-      logger.info("Reserve ratio", {
-        ratio: `${(reserveRatio / 100).toFixed(2)}%`,
+      // Overall reserve ratio
+      let overallRatio = 10000;
+      if (aggregatedAssets > 0n) {
+        overallRatio = Number((aggregatedBalance * 10000n) / aggregatedAssets);
+      }
+
+      logger.info("Aggregated reserves", {
+        totalAssets: `$${(Number(aggregatedAssets) / 1e6).toLocaleString()}`,
+        totalBalance: `$${(Number(aggregatedBalance) / 1e6).toLocaleString()}`,
+        overallRatio: `${(overallRatio / 100).toFixed(2)}%`,
+        chains: runtime.config.evms.length,
       });
 
-      // Step 5: Check if update needed
-      const currentReserves = getCurrentReserves(runtime);
+      // Step 5: Check if update needed (using primary chain)
+      const primaryChain = runtime.config.evms[0];
+      const currentReserves = getCurrentReserves(runtime, primaryChain);
       const diff =
-        totalReserves > currentReserves
-          ? totalReserves - currentReserves
-          : currentReserves - totalReserves;
+        aggregatedBalance > currentReserves
+          ? aggregatedBalance - currentReserves
+          : currentReserves - aggregatedBalance;
 
       if (diff < 1000000n) {
-        // Less than 1 USDC difference
         logger.info("Reserve change too small, skipping update");
         return "No update needed";
       }
@@ -316,24 +343,35 @@ const runProofOfReserveWorkflow = async (
 
       const ipfsHash = firebase.uploadReserveReport(runtime, {
         timestamp: Date.now(),
-        totalReserves: `$${reservesInUSDC.toLocaleString()} USDC`,
-        actualBalance: `$${balanceInUSDC.toLocaleString()} USDC`,
-        reserveRatio: `${(reserveRatio / 100).toFixed(2)}%`,
-        attestation: "On-chain USDC balance verified",
+        totalReserves: `$${(Number(aggregatedBalance) / 1e6).toLocaleString()} USDC`,
+        actualBalance: `$${(Number(aggregatedBalance) / 1e6).toLocaleString()} USDC`,
+        reserveRatio: `${(overallRatio / 100).toFixed(2)}%`,
+        attestation: "On-chain USDC balance verified across all chains",
+        chains: chainReports,
       });
 
       logger.success("PoR report uploaded to Firebase", { ipfsHash });
 
-      // Step 7: Update ProofOfReserveOracle
-      const txHash = updateReserves(runtime, totalReserves, ipfsHash);
+      // Step 7: Update ProofOfReserveOracle on ALL chains
+      const txHashes: string[] = [];
+      for (const chain of runtime.config.evms) {
+        const txHash = updateReserves(
+          runtime,
+          chain,
+          aggregatedBalance,
+          ipfsHash,
+        );
+        txHashes.push(txHash);
+      }
 
-      logger.success("✅ Proof of Reserve Verification Complete", {
-        txHash,
+      logger.success("✅ Multi-chain Proof of Reserve Verification Complete", {
+        txHashes,
         ipfsHash,
-        reserveRatio: `${(reserveRatio / 100).toFixed(2)}%`,
+        reserveRatio: `${(overallRatio / 100).toFixed(2)}%`,
+        chainsUpdated: runtime.config.evms.length,
       });
 
-      return txHash;
+      return txHashes.join(",");
     },
     { operation: "Proof of Reserve Verification", runtime },
   );
@@ -369,34 +407,40 @@ const onLogTrigger = async (
 };
 
 /**
- * Initialize workflow — listens for ReserveVerificationRequested events
+ * Initialize workflow — listens for ReserveVerificationRequested events on ALL chains
  */
 const initWorkflow = (config: Config) => {
-  const network = getNetwork({
-    chainFamily: "evm",
-    chainSelectorName: config.chainSelectorName,
-    isTestnet: true,
-  });
+  const eventHash = keccak256(toHex(eventSignature));
+  const handlers = [];
 
-  if (!network) {
-    throw new Error(`Network not found: ${config.chainSelectorName}`);
+  for (const chain of config.evms) {
+    const network = getNetwork({
+      chainFamily: "evm",
+      chainSelectorName: chain.chainName,
+      isTestnet: true,
+    });
+
+    if (!network) {
+      throw new Error(`Network not found: ${chain.chainName}`);
+    }
+
+    const evmClient = new cre.capabilities.EVMClient(
+      network.chainSelector.selector,
+    );
+
+    handlers.push(
+      cre.handler(
+        evmClient.logTrigger({
+          addresses: [chain.proofOfReserveOracleAddress],
+          topics: [{ values: [eventHash] }],
+          confidence: "CONFIDENCE_LEVEL_FINALIZED",
+        }),
+        onLogTrigger,
+      ),
+    );
   }
 
-  const evmClient = new cre.capabilities.EVMClient(
-    network.chainSelector.selector,
-  );
-  const eventHash = keccak256(toHex(eventSignature));
-
-  return [
-    cre.handler(
-      evmClient.logTrigger({
-        addresses: [config.proofOfReserveOracleAddress],
-        topics: [{ values: [eventHash] }],
-        confidence: "CONFIDENCE_LEVEL_FINALIZED",
-      }),
-      onLogTrigger,
-    ),
-  ];
+  return handlers;
 };
 
 /**

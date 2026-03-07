@@ -10,11 +10,74 @@ var __export = (target, all) => {
     });
 };
 var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+var version = "1.0.8";
+var BaseError;
+var init_errors = __esm(() => {
+  BaseError = class BaseError2 extends Error {
+    constructor(shortMessage, args = {}) {
+      const details = args.cause instanceof BaseError2 ? args.cause.details : args.cause?.message ? args.cause.message : args.details;
+      const docsPath = args.cause instanceof BaseError2 ? args.cause.docsPath || args.docsPath : args.docsPath;
+      const message = [
+        shortMessage || "An error occurred.",
+        "",
+        ...args.metaMessages ? [...args.metaMessages, ""] : [],
+        ...docsPath ? [`Docs: https://abitype.dev${docsPath}`] : [],
+        ...details ? [`Details: ${details}`] : [],
+        `Version: abitype@${version}`
+      ].join(`
+`);
+      super(message);
+      Object.defineProperty(this, "details", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      Object.defineProperty(this, "docsPath", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      Object.defineProperty(this, "metaMessages", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      Object.defineProperty(this, "shortMessage", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "AbiTypeError"
+      });
+      if (args.cause)
+        this.cause = args.cause;
+      this.details = details;
+      this.docsPath = docsPath;
+      this.metaMessages = args.metaMessages;
+      this.shortMessage = shortMessage;
+    }
+  };
+});
 function execTyped(regex, string) {
   const match = regex.exec(string);
   return match?.groups;
 }
-var init_regex = () => {};
+var bytesRegex;
+var integerRegex;
+var isTupleRegex;
+var init_regex = __esm(() => {
+  bytesRegex = /^bytes([1-9]|1[0-9]|2[0-9]|3[0-2])?$/;
+  integerRegex = /^u?int(8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)?$/;
+  isTupleRegex = /^\(.+?\).*?$/;
+});
 function formatAbiParameter(abiParameter) {
   let type = abiParameter.type;
   if (tupleRegex.test(abiParameter.type) && "components" in abiParameter) {
@@ -74,8 +137,653 @@ function formatAbiItem(abiItem) {
 var init_formatAbiItem = __esm(() => {
   init_formatAbiParameters();
 });
+function isErrorSignature(signature) {
+  return errorSignatureRegex.test(signature);
+}
+function execErrorSignature(signature) {
+  return execTyped(errorSignatureRegex, signature);
+}
+function isEventSignature(signature) {
+  return eventSignatureRegex.test(signature);
+}
+function execEventSignature(signature) {
+  return execTyped(eventSignatureRegex, signature);
+}
+function isFunctionSignature(signature) {
+  return functionSignatureRegex.test(signature);
+}
+function execFunctionSignature(signature) {
+  return execTyped(functionSignatureRegex, signature);
+}
+function isStructSignature(signature) {
+  return structSignatureRegex.test(signature);
+}
+function execStructSignature(signature) {
+  return execTyped(structSignatureRegex, signature);
+}
+function isConstructorSignature(signature) {
+  return constructorSignatureRegex.test(signature);
+}
+function execConstructorSignature(signature) {
+  return execTyped(constructorSignatureRegex, signature);
+}
+function isFallbackSignature(signature) {
+  return fallbackSignatureRegex.test(signature);
+}
+function execFallbackSignature(signature) {
+  return execTyped(fallbackSignatureRegex, signature);
+}
+function isReceiveSignature(signature) {
+  return receiveSignatureRegex.test(signature);
+}
+var errorSignatureRegex;
+var eventSignatureRegex;
+var functionSignatureRegex;
+var structSignatureRegex;
+var constructorSignatureRegex;
+var fallbackSignatureRegex;
+var receiveSignatureRegex;
+var modifiers;
+var eventModifiers;
+var functionModifiers;
+var init_signatures = __esm(() => {
+  init_regex();
+  errorSignatureRegex = /^error (?<name>[a-zA-Z$_][a-zA-Z0-9$_]*)\((?<parameters>.*?)\)$/;
+  eventSignatureRegex = /^event (?<name>[a-zA-Z$_][a-zA-Z0-9$_]*)\((?<parameters>.*?)\)$/;
+  functionSignatureRegex = /^function (?<name>[a-zA-Z$_][a-zA-Z0-9$_]*)\((?<parameters>.*?)\)(?: (?<scope>external|public{1}))?(?: (?<stateMutability>pure|view|nonpayable|payable{1}))?(?: returns\s?\((?<returns>.*?)\))?$/;
+  structSignatureRegex = /^struct (?<name>[a-zA-Z$_][a-zA-Z0-9$_]*) \{(?<properties>.*?)\}$/;
+  constructorSignatureRegex = /^constructor\((?<parameters>.*?)\)(?:\s(?<stateMutability>payable{1}))?$/;
+  fallbackSignatureRegex = /^fallback\(\) external(?:\s(?<stateMutability>payable{1}))?$/;
+  receiveSignatureRegex = /^receive\(\) external payable$/;
+  modifiers = new Set([
+    "memory",
+    "indexed",
+    "storage",
+    "calldata"
+  ]);
+  eventModifiers = new Set(["indexed"]);
+  functionModifiers = new Set([
+    "calldata",
+    "memory",
+    "storage"
+  ]);
+});
+var UnknownTypeError;
+var UnknownSolidityTypeError;
+var init_abiItem = __esm(() => {
+  init_errors();
+  UnknownTypeError = class UnknownTypeError2 extends BaseError {
+    constructor({ type }) {
+      super("Unknown type.", {
+        metaMessages: [
+          `Type "${type}" is not a valid ABI type. Perhaps you forgot to include a struct signature?`
+        ]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "UnknownTypeError"
+      });
+    }
+  };
+  UnknownSolidityTypeError = class UnknownSolidityTypeError2 extends BaseError {
+    constructor({ type }) {
+      super("Unknown type.", {
+        metaMessages: [`Type "${type}" is not a valid ABI type.`]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "UnknownSolidityTypeError"
+      });
+    }
+  };
+});
+var InvalidParameterError;
+var SolidityProtectedKeywordError;
+var InvalidModifierError;
+var InvalidFunctionModifierError;
+var InvalidAbiTypeParameterError;
+var init_abiParameter = __esm(() => {
+  init_errors();
+  InvalidParameterError = class InvalidParameterError2 extends BaseError {
+    constructor({ param }) {
+      super("Invalid ABI parameter.", {
+        details: param
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "InvalidParameterError"
+      });
+    }
+  };
+  SolidityProtectedKeywordError = class SolidityProtectedKeywordError2 extends BaseError {
+    constructor({ param, name }) {
+      super("Invalid ABI parameter.", {
+        details: param,
+        metaMessages: [
+          `"${name}" is a protected Solidity keyword. More info: https://docs.soliditylang.org/en/latest/cheatsheet.html`
+        ]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "SolidityProtectedKeywordError"
+      });
+    }
+  };
+  InvalidModifierError = class InvalidModifierError2 extends BaseError {
+    constructor({ param, type, modifier }) {
+      super("Invalid ABI parameter.", {
+        details: param,
+        metaMessages: [
+          `Modifier "${modifier}" not allowed${type ? ` in "${type}" type` : ""}.`
+        ]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "InvalidModifierError"
+      });
+    }
+  };
+  InvalidFunctionModifierError = class InvalidFunctionModifierError2 extends BaseError {
+    constructor({ param, type, modifier }) {
+      super("Invalid ABI parameter.", {
+        details: param,
+        metaMessages: [
+          `Modifier "${modifier}" not allowed${type ? ` in "${type}" type` : ""}.`,
+          `Data location can only be specified for array, struct, or mapping types, but "${modifier}" was given.`
+        ]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "InvalidFunctionModifierError"
+      });
+    }
+  };
+  InvalidAbiTypeParameterError = class InvalidAbiTypeParameterError2 extends BaseError {
+    constructor({ abiParameter }) {
+      super("Invalid ABI parameter.", {
+        details: JSON.stringify(abiParameter, null, 2),
+        metaMessages: ["ABI parameter type is invalid."]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "InvalidAbiTypeParameterError"
+      });
+    }
+  };
+});
+var InvalidSignatureError;
+var UnknownSignatureError;
+var InvalidStructSignatureError;
+var init_signature = __esm(() => {
+  init_errors();
+  InvalidSignatureError = class InvalidSignatureError2 extends BaseError {
+    constructor({ signature, type }) {
+      super(`Invalid ${type} signature.`, {
+        details: signature
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "InvalidSignatureError"
+      });
+    }
+  };
+  UnknownSignatureError = class UnknownSignatureError2 extends BaseError {
+    constructor({ signature }) {
+      super("Unknown signature.", {
+        details: signature
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "UnknownSignatureError"
+      });
+    }
+  };
+  InvalidStructSignatureError = class InvalidStructSignatureError2 extends BaseError {
+    constructor({ signature }) {
+      super("Invalid struct signature.", {
+        details: signature,
+        metaMessages: ["No properties exist."]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "InvalidStructSignatureError"
+      });
+    }
+  };
+});
+var CircularReferenceError;
+var init_struct = __esm(() => {
+  init_errors();
+  CircularReferenceError = class CircularReferenceError2 extends BaseError {
+    constructor({ type }) {
+      super("Circular reference detected.", {
+        metaMessages: [`Struct "${type}" is a circular reference.`]
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "CircularReferenceError"
+      });
+    }
+  };
+});
+var InvalidParenthesisError;
+var init_splitParameters = __esm(() => {
+  init_errors();
+  InvalidParenthesisError = class InvalidParenthesisError2 extends BaseError {
+    constructor({ current, depth }) {
+      super("Unbalanced parentheses.", {
+        metaMessages: [
+          `"${current.trim()}" has too many ${depth > 0 ? "opening" : "closing"} parentheses.`
+        ],
+        details: `Depth "${depth}"`
+      });
+      Object.defineProperty(this, "name", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: "InvalidParenthesisError"
+      });
+    }
+  };
+});
+function getParameterCacheKey(param, type, structs) {
+  let structKey = "";
+  if (structs)
+    for (const struct of Object.entries(structs)) {
+      if (!struct)
+        continue;
+      let propertyKey = "";
+      for (const property of struct[1]) {
+        propertyKey += `[${property.type}${property.name ? `:${property.name}` : ""}]`;
+      }
+      structKey += `(${struct[0]}{${propertyKey}})`;
+    }
+  if (type)
+    return `${type}:${param}${structKey}`;
+  return param;
+}
+var parameterCache;
+var init_cache = __esm(() => {
+  parameterCache = new Map([
+    ["address", { type: "address" }],
+    ["bool", { type: "bool" }],
+    ["bytes", { type: "bytes" }],
+    ["bytes32", { type: "bytes32" }],
+    ["int", { type: "int256" }],
+    ["int256", { type: "int256" }],
+    ["string", { type: "string" }],
+    ["uint", { type: "uint256" }],
+    ["uint8", { type: "uint8" }],
+    ["uint16", { type: "uint16" }],
+    ["uint24", { type: "uint24" }],
+    ["uint32", { type: "uint32" }],
+    ["uint64", { type: "uint64" }],
+    ["uint96", { type: "uint96" }],
+    ["uint112", { type: "uint112" }],
+    ["uint160", { type: "uint160" }],
+    ["uint192", { type: "uint192" }],
+    ["uint256", { type: "uint256" }],
+    ["address owner", { type: "address", name: "owner" }],
+    ["address to", { type: "address", name: "to" }],
+    ["bool approved", { type: "bool", name: "approved" }],
+    ["bytes _data", { type: "bytes", name: "_data" }],
+    ["bytes data", { type: "bytes", name: "data" }],
+    ["bytes signature", { type: "bytes", name: "signature" }],
+    ["bytes32 hash", { type: "bytes32", name: "hash" }],
+    ["bytes32 r", { type: "bytes32", name: "r" }],
+    ["bytes32 root", { type: "bytes32", name: "root" }],
+    ["bytes32 s", { type: "bytes32", name: "s" }],
+    ["string name", { type: "string", name: "name" }],
+    ["string symbol", { type: "string", name: "symbol" }],
+    ["string tokenURI", { type: "string", name: "tokenURI" }],
+    ["uint tokenId", { type: "uint256", name: "tokenId" }],
+    ["uint8 v", { type: "uint8", name: "v" }],
+    ["uint256 balance", { type: "uint256", name: "balance" }],
+    ["uint256 tokenId", { type: "uint256", name: "tokenId" }],
+    ["uint256 value", { type: "uint256", name: "value" }],
+    [
+      "event:address indexed from",
+      { type: "address", name: "from", indexed: true }
+    ],
+    ["event:address indexed to", { type: "address", name: "to", indexed: true }],
+    [
+      "event:uint indexed tokenId",
+      { type: "uint256", name: "tokenId", indexed: true }
+    ],
+    [
+      "event:uint256 indexed tokenId",
+      { type: "uint256", name: "tokenId", indexed: true }
+    ]
+  ]);
+});
+function parseSignature(signature, structs = {}) {
+  if (isFunctionSignature(signature))
+    return parseFunctionSignature(signature, structs);
+  if (isEventSignature(signature))
+    return parseEventSignature(signature, structs);
+  if (isErrorSignature(signature))
+    return parseErrorSignature(signature, structs);
+  if (isConstructorSignature(signature))
+    return parseConstructorSignature(signature, structs);
+  if (isFallbackSignature(signature))
+    return parseFallbackSignature(signature);
+  if (isReceiveSignature(signature))
+    return {
+      type: "receive",
+      stateMutability: "payable"
+    };
+  throw new UnknownSignatureError({ signature });
+}
+function parseFunctionSignature(signature, structs = {}) {
+  const match = execFunctionSignature(signature);
+  if (!match)
+    throw new InvalidSignatureError({ signature, type: "function" });
+  const inputParams = splitParameters(match.parameters);
+  const inputs = [];
+  const inputLength = inputParams.length;
+  for (let i2 = 0;i2 < inputLength; i2++) {
+    inputs.push(parseAbiParameter(inputParams[i2], {
+      modifiers: functionModifiers,
+      structs,
+      type: "function"
+    }));
+  }
+  const outputs = [];
+  if (match.returns) {
+    const outputParams = splitParameters(match.returns);
+    const outputLength = outputParams.length;
+    for (let i2 = 0;i2 < outputLength; i2++) {
+      outputs.push(parseAbiParameter(outputParams[i2], {
+        modifiers: functionModifiers,
+        structs,
+        type: "function"
+      }));
+    }
+  }
+  return {
+    name: match.name,
+    type: "function",
+    stateMutability: match.stateMutability ?? "nonpayable",
+    inputs,
+    outputs
+  };
+}
+function parseEventSignature(signature, structs = {}) {
+  const match = execEventSignature(signature);
+  if (!match)
+    throw new InvalidSignatureError({ signature, type: "event" });
+  const params = splitParameters(match.parameters);
+  const abiParameters = [];
+  const length = params.length;
+  for (let i2 = 0;i2 < length; i2++)
+    abiParameters.push(parseAbiParameter(params[i2], {
+      modifiers: eventModifiers,
+      structs,
+      type: "event"
+    }));
+  return { name: match.name, type: "event", inputs: abiParameters };
+}
+function parseErrorSignature(signature, structs = {}) {
+  const match = execErrorSignature(signature);
+  if (!match)
+    throw new InvalidSignatureError({ signature, type: "error" });
+  const params = splitParameters(match.parameters);
+  const abiParameters = [];
+  const length = params.length;
+  for (let i2 = 0;i2 < length; i2++)
+    abiParameters.push(parseAbiParameter(params[i2], { structs, type: "error" }));
+  return { name: match.name, type: "error", inputs: abiParameters };
+}
+function parseConstructorSignature(signature, structs = {}) {
+  const match = execConstructorSignature(signature);
+  if (!match)
+    throw new InvalidSignatureError({ signature, type: "constructor" });
+  const params = splitParameters(match.parameters);
+  const abiParameters = [];
+  const length = params.length;
+  for (let i2 = 0;i2 < length; i2++)
+    abiParameters.push(parseAbiParameter(params[i2], { structs, type: "constructor" }));
+  return {
+    type: "constructor",
+    stateMutability: match.stateMutability ?? "nonpayable",
+    inputs: abiParameters
+  };
+}
+function parseFallbackSignature(signature) {
+  const match = execFallbackSignature(signature);
+  if (!match)
+    throw new InvalidSignatureError({ signature, type: "fallback" });
+  return {
+    type: "fallback",
+    stateMutability: match.stateMutability ?? "nonpayable"
+  };
+}
+function parseAbiParameter(param, options) {
+  const parameterCacheKey = getParameterCacheKey(param, options?.type, options?.structs);
+  if (parameterCache.has(parameterCacheKey))
+    return parameterCache.get(parameterCacheKey);
+  const isTuple = isTupleRegex.test(param);
+  const match = execTyped(isTuple ? abiParameterWithTupleRegex : abiParameterWithoutTupleRegex, param);
+  if (!match)
+    throw new InvalidParameterError({ param });
+  if (match.name && isSolidityKeyword(match.name))
+    throw new SolidityProtectedKeywordError({ param, name: match.name });
+  const name = match.name ? { name: match.name } : {};
+  const indexed = match.modifier === "indexed" ? { indexed: true } : {};
+  const structs = options?.structs ?? {};
+  let type;
+  let components = {};
+  if (isTuple) {
+    type = "tuple";
+    const params = splitParameters(match.type);
+    const components_ = [];
+    const length = params.length;
+    for (let i2 = 0;i2 < length; i2++) {
+      components_.push(parseAbiParameter(params[i2], { structs }));
+    }
+    components = { components: components_ };
+  } else if (match.type in structs) {
+    type = "tuple";
+    components = { components: structs[match.type] };
+  } else if (dynamicIntegerRegex.test(match.type)) {
+    type = `${match.type}256`;
+  } else {
+    type = match.type;
+    if (!(options?.type === "struct") && !isSolidityType(type))
+      throw new UnknownSolidityTypeError({ type });
+  }
+  if (match.modifier) {
+    if (!options?.modifiers?.has?.(match.modifier))
+      throw new InvalidModifierError({
+        param,
+        type: options?.type,
+        modifier: match.modifier
+      });
+    if (functionModifiers.has(match.modifier) && !isValidDataLocation(type, !!match.array))
+      throw new InvalidFunctionModifierError({
+        param,
+        type: options?.type,
+        modifier: match.modifier
+      });
+  }
+  const abiParameter = {
+    type: `${type}${match.array ?? ""}`,
+    ...name,
+    ...indexed,
+    ...components
+  };
+  parameterCache.set(parameterCacheKey, abiParameter);
+  return abiParameter;
+}
+function splitParameters(params, result = [], current = "", depth = 0) {
+  const length = params.trim().length;
+  for (let i2 = 0;i2 < length; i2++) {
+    const char = params[i2];
+    const tail = params.slice(i2 + 1);
+    switch (char) {
+      case ",":
+        return depth === 0 ? splitParameters(tail, [...result, current.trim()]) : splitParameters(tail, result, `${current}${char}`, depth);
+      case "(":
+        return splitParameters(tail, result, `${current}${char}`, depth + 1);
+      case ")":
+        return splitParameters(tail, result, `${current}${char}`, depth - 1);
+      default:
+        return splitParameters(tail, result, `${current}${char}`, depth);
+    }
+  }
+  if (current === "")
+    return result;
+  if (depth !== 0)
+    throw new InvalidParenthesisError({ current, depth });
+  result.push(current.trim());
+  return result;
+}
+function isSolidityType(type) {
+  return type === "address" || type === "bool" || type === "function" || type === "string" || bytesRegex.test(type) || integerRegex.test(type);
+}
+function isSolidityKeyword(name) {
+  return name === "address" || name === "bool" || name === "function" || name === "string" || name === "tuple" || bytesRegex.test(name) || integerRegex.test(name) || protectedKeywordsRegex.test(name);
+}
+function isValidDataLocation(type, isArray) {
+  return isArray || type === "bytes" || type === "string" || type === "tuple";
+}
+var abiParameterWithoutTupleRegex;
+var abiParameterWithTupleRegex;
+var dynamicIntegerRegex;
+var protectedKeywordsRegex;
+var init_utils = __esm(() => {
+  init_regex();
+  init_abiItem();
+  init_abiParameter();
+  init_signature();
+  init_splitParameters();
+  init_cache();
+  init_signatures();
+  abiParameterWithoutTupleRegex = /^(?<type>[a-zA-Z$_][a-zA-Z0-9$_]*)(?<array>(?:\[\d*?\])+?)?(?:\s(?<modifier>calldata|indexed|memory|storage{1}))?(?:\s(?<name>[a-zA-Z$_][a-zA-Z0-9$_]*))?$/;
+  abiParameterWithTupleRegex = /^\((?<type>.+?)\)(?<array>(?:\[\d*?\])+?)?(?:\s(?<modifier>calldata|indexed|memory|storage{1}))?(?:\s(?<name>[a-zA-Z$_][a-zA-Z0-9$_]*))?$/;
+  dynamicIntegerRegex = /^u?int$/;
+  protectedKeywordsRegex = /^(?:after|alias|anonymous|apply|auto|byte|calldata|case|catch|constant|copyof|default|defined|error|event|external|false|final|function|immutable|implements|in|indexed|inline|internal|let|mapping|match|memory|mutable|null|of|override|partial|private|promise|public|pure|reference|relocatable|return|returns|sizeof|static|storage|struct|super|supports|switch|this|true|try|typedef|typeof|var|view|virtual)$/;
+});
+function parseStructs(signatures) {
+  const shallowStructs = {};
+  const signaturesLength = signatures.length;
+  for (let i2 = 0;i2 < signaturesLength; i2++) {
+    const signature = signatures[i2];
+    if (!isStructSignature(signature))
+      continue;
+    const match = execStructSignature(signature);
+    if (!match)
+      throw new InvalidSignatureError({ signature, type: "struct" });
+    const properties = match.properties.split(";");
+    const components = [];
+    const propertiesLength = properties.length;
+    for (let k = 0;k < propertiesLength; k++) {
+      const property = properties[k];
+      const trimmed = property.trim();
+      if (!trimmed)
+        continue;
+      const abiParameter = parseAbiParameter(trimmed, {
+        type: "struct"
+      });
+      components.push(abiParameter);
+    }
+    if (!components.length)
+      throw new InvalidStructSignatureError({ signature });
+    shallowStructs[match.name] = components;
+  }
+  const resolvedStructs = {};
+  const entries = Object.entries(shallowStructs);
+  const entriesLength = entries.length;
+  for (let i2 = 0;i2 < entriesLength; i2++) {
+    const [name, parameters] = entries[i2];
+    resolvedStructs[name] = resolveStructs(parameters, shallowStructs);
+  }
+  return resolvedStructs;
+}
+function resolveStructs(abiParameters, structs, ancestors = new Set) {
+  const components = [];
+  const length = abiParameters.length;
+  for (let i2 = 0;i2 < length; i2++) {
+    const abiParameter = abiParameters[i2];
+    const isTuple = isTupleRegex.test(abiParameter.type);
+    if (isTuple)
+      components.push(abiParameter);
+    else {
+      const match = execTyped(typeWithoutTupleRegex, abiParameter.type);
+      if (!match?.type)
+        throw new InvalidAbiTypeParameterError({ abiParameter });
+      const { array, type } = match;
+      if (type in structs) {
+        if (ancestors.has(type))
+          throw new CircularReferenceError({ type });
+        components.push({
+          ...abiParameter,
+          type: `tuple${array ?? ""}`,
+          components: resolveStructs(structs[type] ?? [], structs, new Set([...ancestors, type]))
+        });
+      } else {
+        if (isSolidityType(type))
+          components.push(abiParameter);
+        else
+          throw new UnknownTypeError({ type });
+      }
+    }
+  }
+  return components;
+}
+var typeWithoutTupleRegex;
+var init_structs = __esm(() => {
+  init_regex();
+  init_abiItem();
+  init_abiParameter();
+  init_signature();
+  init_struct();
+  init_signatures();
+  init_utils();
+  typeWithoutTupleRegex = /^(?<type>[a-zA-Z$_][a-zA-Z0-9$_]*)(?<array>(?:\[\d*?\])+?)?$/;
+});
+function parseAbi(signatures) {
+  const structs = parseStructs(signatures);
+  const abi = [];
+  const length = signatures.length;
+  for (let i2 = 0;i2 < length; i2++) {
+    const signature = signatures[i2];
+    if (isStructSignature(signature))
+      continue;
+    abi.push(parseSignature(signature, structs));
+  }
+  return abi;
+}
+var init_parseAbi = __esm(() => {
+  init_signatures();
+  init_structs();
+  init_utils();
+});
 var init_exports = __esm(() => {
   init_formatAbiItem();
+  init_parseAbi();
 });
 function formatAbiItem2(abiItem, { includeName = false } = {}) {
   if (abiItem.type !== "function" && abiItem.type !== "event" && abiItem.type !== "error")
@@ -109,7 +817,7 @@ function size(value2) {
   return value2.length;
 }
 var init_size = () => {};
-var version = "2.34.0";
+var version2 = "2.34.0";
 function walk(err, fn) {
   if (fn?.(err))
     return err;
@@ -118,23 +826,23 @@ function walk(err, fn) {
   return fn ? null : err;
 }
 var errorConfig;
-var BaseError;
+var BaseError2;
 var init_base = __esm(() => {
   errorConfig = {
     getDocsUrl: ({ docsBaseUrl, docsPath = "", docsSlug }) => docsPath ? `${docsBaseUrl ?? "https://viem.sh"}${docsPath}${docsSlug ? `#${docsSlug}` : ""}` : undefined,
-    version: `viem@${version}`
+    version: `viem@${version2}`
   };
-  BaseError = class BaseError2 extends Error {
+  BaseError2 = class BaseError22 extends Error {
     constructor(shortMessage, args = {}) {
       const details = (() => {
-        if (args.cause instanceof BaseError2)
+        if (args.cause instanceof BaseError22)
           return args.cause.details;
         if (args.cause?.message)
           return args.cause.message;
         return args.details;
       })();
       const docsPath = (() => {
-        if (args.cause instanceof BaseError2)
+        if (args.cause instanceof BaseError22)
           return args.cause.docsPath || args.docsPath;
         return args.docsPath;
       })();
@@ -190,7 +898,7 @@ var init_base = __esm(() => {
       this.metaMessages = args.metaMessages;
       this.name = args.name ?? this.name;
       this.shortMessage = shortMessage;
-      this.version = version;
+      this.version = version2;
     }
     walk(fn) {
       return walk(this, fn);
@@ -202,9 +910,13 @@ var AbiDecodingZeroDataError;
 var AbiEncodingArrayLengthMismatchError;
 var AbiEncodingBytesSizeMismatchError;
 var AbiEncodingLengthMismatchError;
+var AbiEventSignatureEmptyTopicsError;
+var AbiEventSignatureNotFoundError;
 var AbiFunctionNotFoundError;
 var AbiFunctionOutputsNotFoundError;
 var AbiItemAmbiguityError;
+var DecodeLogDataMismatch;
+var DecodeLogTopicsMismatch;
 var InvalidAbiEncodingTypeError;
 var InvalidAbiDecodingTypeError;
 var InvalidArrayError;
@@ -213,7 +925,7 @@ var init_abi = __esm(() => {
   init_formatAbiItem2();
   init_size();
   init_base();
-  AbiDecodingDataSizeTooSmallError = class AbiDecodingDataSizeTooSmallError2 extends BaseError {
+  AbiDecodingDataSizeTooSmallError = class AbiDecodingDataSizeTooSmallError2 extends BaseError2 {
     constructor({ data, params, size: size2 }) {
       super([`Data size of ${size2} bytes is too small for given parameters.`].join(`
 `), {
@@ -246,14 +958,14 @@ var init_abi = __esm(() => {
       this.size = size2;
     }
   };
-  AbiDecodingZeroDataError = class AbiDecodingZeroDataError2 extends BaseError {
+  AbiDecodingZeroDataError = class AbiDecodingZeroDataError2 extends BaseError2 {
     constructor() {
       super('Cannot decode zero data ("0x") with ABI parameters.', {
         name: "AbiDecodingZeroDataError"
       });
     }
   };
-  AbiEncodingArrayLengthMismatchError = class AbiEncodingArrayLengthMismatchError2 extends BaseError {
+  AbiEncodingArrayLengthMismatchError = class AbiEncodingArrayLengthMismatchError2 extends BaseError2 {
     constructor({ expectedLength, givenLength, type }) {
       super([
         `ABI encoding array length mismatch for type ${type}.`,
@@ -263,12 +975,12 @@ var init_abi = __esm(() => {
 `), { name: "AbiEncodingArrayLengthMismatchError" });
     }
   };
-  AbiEncodingBytesSizeMismatchError = class AbiEncodingBytesSizeMismatchError2 extends BaseError {
+  AbiEncodingBytesSizeMismatchError = class AbiEncodingBytesSizeMismatchError2 extends BaseError2 {
     constructor({ expectedSize, value: value2 }) {
       super(`Size of bytes "${value2}" (bytes${size(value2)}) does not match expected size (bytes${expectedSize}).`, { name: "AbiEncodingBytesSizeMismatchError" });
     }
   };
-  AbiEncodingLengthMismatchError = class AbiEncodingLengthMismatchError2 extends BaseError {
+  AbiEncodingLengthMismatchError = class AbiEncodingLengthMismatchError2 extends BaseError2 {
     constructor({ expectedLength, givenLength }) {
       super([
         "ABI encoding params/values length mismatch.",
@@ -278,7 +990,28 @@ var init_abi = __esm(() => {
 `), { name: "AbiEncodingLengthMismatchError" });
     }
   };
-  AbiFunctionNotFoundError = class AbiFunctionNotFoundError2 extends BaseError {
+  AbiEventSignatureEmptyTopicsError = class AbiEventSignatureEmptyTopicsError2 extends BaseError2 {
+    constructor({ docsPath }) {
+      super("Cannot extract event signature from empty topics.", {
+        docsPath,
+        name: "AbiEventSignatureEmptyTopicsError"
+      });
+    }
+  };
+  AbiEventSignatureNotFoundError = class AbiEventSignatureNotFoundError2 extends BaseError2 {
+    constructor(signature, { docsPath }) {
+      super([
+        `Encoded event signature "${signature}" not found on ABI.`,
+        "Make sure you are using the correct ABI and that the event exists on it.",
+        `You can look up the signature here: https://openchain.xyz/signatures?query=${signature}.`
+      ].join(`
+`), {
+        docsPath,
+        name: "AbiEventSignatureNotFoundError"
+      });
+    }
+  };
+  AbiFunctionNotFoundError = class AbiFunctionNotFoundError2 extends BaseError2 {
     constructor(functionName, { docsPath } = {}) {
       super([
         `Function ${functionName ? `"${functionName}" ` : ""}not found on ABI.`,
@@ -290,7 +1023,7 @@ var init_abi = __esm(() => {
       });
     }
   };
-  AbiFunctionOutputsNotFoundError = class AbiFunctionOutputsNotFoundError2 extends BaseError {
+  AbiFunctionOutputsNotFoundError = class AbiFunctionOutputsNotFoundError2 extends BaseError2 {
     constructor(functionName, { docsPath }) {
       super([
         `Function "${functionName}" does not contain any \`outputs\` on ABI.`,
@@ -303,7 +1036,7 @@ var init_abi = __esm(() => {
       });
     }
   };
-  AbiItemAmbiguityError = class AbiItemAmbiguityError2 extends BaseError {
+  AbiItemAmbiguityError = class AbiItemAmbiguityError2 extends BaseError2 {
     constructor(x, y) {
       super("Found ambiguous types in overloaded ABI items.", {
         metaMessages: [
@@ -317,7 +1050,64 @@ var init_abi = __esm(() => {
       });
     }
   };
-  InvalidAbiEncodingTypeError = class InvalidAbiEncodingTypeError2 extends BaseError {
+  DecodeLogDataMismatch = class DecodeLogDataMismatch2 extends BaseError2 {
+    constructor({ abiItem, data, params, size: size2 }) {
+      super([
+        `Data size of ${size2} bytes is too small for non-indexed event parameters.`
+      ].join(`
+`), {
+        metaMessages: [
+          `Params: (${formatAbiParams(params, { includeName: true })})`,
+          `Data:   ${data} (${size2} bytes)`
+        ],
+        name: "DecodeLogDataMismatch"
+      });
+      Object.defineProperty(this, "abiItem", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      Object.defineProperty(this, "data", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      Object.defineProperty(this, "params", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      Object.defineProperty(this, "size", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      this.abiItem = abiItem;
+      this.data = data;
+      this.params = params;
+      this.size = size2;
+    }
+  };
+  DecodeLogTopicsMismatch = class DecodeLogTopicsMismatch2 extends BaseError2 {
+    constructor({ abiItem, param }) {
+      super([
+        `Expected a topic for indexed event parameter${param.name ? ` "${param.name}"` : ""} on event "${formatAbiItem2(abiItem, { includeName: true })}".`
+      ].join(`
+`), { name: "DecodeLogTopicsMismatch" });
+      Object.defineProperty(this, "abiItem", {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value: undefined
+      });
+      this.abiItem = abiItem;
+    }
+  };
+  InvalidAbiEncodingTypeError = class InvalidAbiEncodingTypeError2 extends BaseError2 {
     constructor(type, { docsPath }) {
       super([
         `Type "${type}" is not a valid encoding type.`,
@@ -326,7 +1116,7 @@ var init_abi = __esm(() => {
 `), { docsPath, name: "InvalidAbiEncodingType" });
     }
   };
-  InvalidAbiDecodingTypeError = class InvalidAbiDecodingTypeError2 extends BaseError {
+  InvalidAbiDecodingTypeError = class InvalidAbiDecodingTypeError2 extends BaseError2 {
     constructor(type, { docsPath }) {
       super([
         `Type "${type}" is not a valid decoding type.`,
@@ -335,7 +1125,7 @@ var init_abi = __esm(() => {
 `), { docsPath, name: "InvalidAbiDecodingType" });
     }
   };
-  InvalidArrayError = class InvalidArrayError2 extends BaseError {
+  InvalidArrayError = class InvalidArrayError2 extends BaseError2 {
     constructor(value2) {
       super([`Value "${value2}" is not a valid array.`].join(`
 `), {
@@ -343,7 +1133,7 @@ var init_abi = __esm(() => {
       });
     }
   };
-  InvalidDefinitionTypeError = class InvalidDefinitionTypeError2 extends BaseError {
+  InvalidDefinitionTypeError = class InvalidDefinitionTypeError2 extends BaseError2 {
     constructor(type) {
       super([
         `"${type}" is not a valid definition type.`,
@@ -357,12 +1147,12 @@ var SliceOffsetOutOfBoundsError;
 var SizeExceedsPaddingSizeError;
 var init_data = __esm(() => {
   init_base();
-  SliceOffsetOutOfBoundsError = class SliceOffsetOutOfBoundsError2 extends BaseError {
+  SliceOffsetOutOfBoundsError = class SliceOffsetOutOfBoundsError2 extends BaseError2 {
     constructor({ offset, position, size: size2 }) {
       super(`Slice ${position === "start" ? "starting" : "ending"} at offset "${offset}" is out-of-bounds (size: ${size2}).`, { name: "SliceOffsetOutOfBoundsError" });
     }
   };
-  SizeExceedsPaddingSizeError = class SizeExceedsPaddingSizeError2 extends BaseError {
+  SizeExceedsPaddingSizeError = class SizeExceedsPaddingSizeError2 extends BaseError2 {
     constructor({ size: size2, targetSize, type }) {
       super(`${type.charAt(0).toUpperCase()}${type.slice(1).toLowerCase()} size (${size2}) exceeds padding size (${targetSize}).`, { name: "SizeExceedsPaddingSizeError" });
     }
@@ -409,19 +1199,19 @@ var InvalidBytesBooleanError;
 var SizeOverflowError;
 var init_encoding = __esm(() => {
   init_base();
-  IntegerOutOfRangeError = class IntegerOutOfRangeError2 extends BaseError {
+  IntegerOutOfRangeError = class IntegerOutOfRangeError2 extends BaseError2 {
     constructor({ max, min, signed, size: size2, value: value2 }) {
       super(`Number "${value2}" is not in safe ${size2 ? `${size2 * 8}-bit ${signed ? "signed" : "unsigned"} ` : ""}integer range ${max ? `(${min} to ${max})` : `(above ${min})`}`, { name: "IntegerOutOfRangeError" });
     }
   };
-  InvalidBytesBooleanError = class InvalidBytesBooleanError2 extends BaseError {
+  InvalidBytesBooleanError = class InvalidBytesBooleanError2 extends BaseError2 {
     constructor(bytes) {
       super(`Bytes value "${bytes}" is not a valid boolean. The bytes array must contain a single byte of either a 0 or 1 value.`, {
         name: "InvalidBytesBooleanError"
       });
     }
   };
-  SizeOverflowError = class SizeOverflowError2 extends BaseError {
+  SizeOverflowError = class SizeOverflowError2 extends BaseError2 {
     constructor({ givenSize, maxSize }) {
       super(`Size cannot exceed ${maxSize} bytes. Given size: ${givenSize} bytes.`, { name: "SizeOverflowError" });
     }
@@ -584,7 +1374,7 @@ function hexToBytes2(hex_, opts = {}) {
     const nibbleLeft = charCodeToBase16(hexString.charCodeAt(j++));
     const nibbleRight = charCodeToBase16(hexString.charCodeAt(j++));
     if (nibbleLeft === undefined || nibbleRight === undefined) {
-      throw new BaseError(`Invalid byte sequence ("${hexString[j - 2]}${hexString[j - 1]}" in "${hexString}").`);
+      throw new BaseError2(`Invalid byte sequence ("${hexString[j - 2]}${hexString[j - 1]}" in "${hexString}").`);
     }
     bytes[index] = nibbleLeft * 16 + nibbleRight;
   }
@@ -711,7 +1501,7 @@ function createHasher(hashCons) {
 }
 var isLE;
 var swap32IfBE;
-var init_utils = __esm(() => {
+var init_utils2 = __esm(() => {
   /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
   isLE = /* @__PURE__ */ (() => new Uint8Array(new Uint32Array([287454020]).buffer)[0] === 68)();
   swap32IfBE = isLE ? (u) => u : byteSwap32;
@@ -775,7 +1565,7 @@ var gen = (suffix, blockLen, outputLen) => createHasher(() => new Keccak(blockLe
 var keccak_256;
 var init_sha3 = __esm(() => {
   init__u64();
-  init_utils();
+  init_utils2();
   _0n = BigInt(0);
   _1n = BigInt(1);
   _2n = BigInt(2);
@@ -971,7 +1761,7 @@ function normalizeSignature(signature) {
     current += char;
   }
   if (!valid)
-    throw new BaseError("Unable to normalize signature.");
+    throw new BaseError2("Unable to normalize signature.");
   return result;
 }
 var init_normalizeSignature = __esm(() => {
@@ -1004,7 +1794,7 @@ var init_toEventSelector = __esm(() => {
 var InvalidAddressError;
 var init_address = __esm(() => {
   init_base();
-  InvalidAddressError = class InvalidAddressError2 extends BaseError {
+  InvalidAddressError = class InvalidAddressError2 extends BaseError2 {
     constructor({ address }) {
       super(`Address "${address}" is invalid.`, {
         metaMessages: [
@@ -1163,9 +1953,9 @@ var init_slice = __esm(() => {
   init_data();
   init_size();
 });
-var integerRegex;
+var integerRegex2;
 var init_regex2 = __esm(() => {
-  integerRegex = /^(u?int)(8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)?$/;
+  integerRegex2 = /^(u?int)(8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)?$/;
 });
 function encodeAbiParameters(params, values) {
   if (params.length !== values.length)
@@ -1208,7 +1998,7 @@ function prepareParam({ param, value: value2 }) {
   }
   if (param.type.startsWith("uint") || param.type.startsWith("int")) {
     const signed = param.type.startsWith("int");
-    const [, , size2 = "256"] = integerRegex.exec(param.type) ?? [];
+    const [, , size2 = "256"] = integerRegex2.exec(param.type) ?? [];
     return encodeNumber(value2, {
       signed,
       size: Number(size2)
@@ -1312,7 +2102,7 @@ function encodeBytes(value2, { param }) {
 }
 function encodeBool(value2) {
   if (typeof value2 !== "boolean")
-    throw new BaseError(`Invalid boolean value: "${value2}" (type: ${typeof value2}). Expected: \`true\` or \`false\`.`);
+    throw new BaseError2(`Invalid boolean value: "${value2}" (type: ${typeof value2}). Expected: \`true\` or \`false\`.`);
   return { dynamic: false, encoded: padHex(boolToHex(value2)) };
 }
 function encodeNumber(value2, { signed, size: size2 = 256 }) {
@@ -1556,19 +2346,19 @@ var PositionOutOfBoundsError;
 var RecursiveReadLimitExceededError;
 var init_cursor = __esm(() => {
   init_base();
-  NegativeOffsetError = class NegativeOffsetError2 extends BaseError {
+  NegativeOffsetError = class NegativeOffsetError2 extends BaseError2 {
     constructor({ offset }) {
       super(`Offset \`${offset}\` cannot be negative.`, {
         name: "NegativeOffsetError"
       });
     }
   };
-  PositionOutOfBoundsError = class PositionOutOfBoundsError2 extends BaseError {
+  PositionOutOfBoundsError = class PositionOutOfBoundsError2 extends BaseError2 {
     constructor({ length, position }) {
       super(`Position \`${position}\` is out of bounds (\`0 < position < ${length}\`).`, { name: "PositionOutOfBoundsError" });
     }
   };
-  RecursiveReadLimitExceededError = class RecursiveReadLimitExceededError2 extends BaseError {
+  RecursiveReadLimitExceededError = class RecursiveReadLimitExceededError2 extends BaseError2 {
     constructor({ count, limit }) {
       super(`Recursive read limit of \`${limit}\` exceeded (recursive read count: \`${count}\`).`, { name: "RecursiveReadLimitExceededError" });
     }
@@ -1982,13 +2772,13 @@ function decodeFunctionResult(parameters) {
   if (functionName) {
     const item = getAbiItem({ abi, args, name: functionName });
     if (!item)
-      throw new AbiFunctionNotFoundError(functionName, { docsPath: docsPath2 });
+      throw new AbiFunctionNotFoundError(functionName, { docsPath: docsPath3 });
     abiItem = item;
   }
   if (abiItem.type !== "function")
-    throw new AbiFunctionNotFoundError(undefined, { docsPath: docsPath2 });
+    throw new AbiFunctionNotFoundError(undefined, { docsPath: docsPath3 });
   if (!abiItem.outputs)
-    throw new AbiFunctionOutputsNotFoundError(abiItem.name, { docsPath: docsPath2 });
+    throw new AbiFunctionOutputsNotFoundError(abiItem.name, { docsPath: docsPath3 });
   const values = decodeAbiParameters(abiItem.outputs, data);
   if (values && values.length > 1)
     return values;
@@ -1996,7 +2786,7 @@ function decodeFunctionResult(parameters) {
     return values[0];
   return;
 }
-var docsPath2 = "/docs/contract/decodeFunctionResult";
+var docsPath3 = "/docs/contract/decodeFunctionResult";
 var init_decodeFunctionResult = __esm(() => {
   init_abi();
   init_decodeAbiParameters();
@@ -12659,11 +13449,11 @@ function datetimeRegex(args) {
   regex = `${regex}(${opts.join("|")})`;
   return new RegExp(`^${regex}$`);
 }
-function isValidIP(ip, version2) {
-  if ((version2 === "v4" || !version2) && ipv4Regex.test(ip)) {
+function isValidIP(ip, version3) {
+  if ((version3 === "v4" || !version3) && ipv4Regex.test(ip)) {
     return true;
   }
-  if ((version2 === "v6" || !version2) && ipv6Regex.test(ip)) {
+  if ((version3 === "v6" || !version3) && ipv6Regex.test(ip)) {
     return true;
   }
   return false;
@@ -12690,11 +13480,11 @@ function isValidJWT(jwt, alg) {
     return false;
   }
 }
-function isValidCidr(ip, version2) {
-  if ((version2 === "v4" || !version2) && ipv4CidrRegex.test(ip)) {
+function isValidCidr(ip, version3) {
+  if ((version3 === "v4" || !version3) && ipv4CidrRegex.test(ip)) {
     return true;
   }
-  if ((version2 === "v6" || !version2) && ipv6CidrRegex.test(ip)) {
+  if ((version3 === "v6" || !version3) && ipv6CidrRegex.test(ip)) {
     return true;
   }
   return false;
@@ -16215,9 +17005,90 @@ var sendErrorResponse = (error) => {
   }
   hostBindings.sendResponse(payload);
 };
+init_exports();
+init_abi();
+init_size();
+init_toEventSelector();
+init_cursor();
+init_decodeAbiParameters();
+init_formatAbiItem2();
+var docsPath2 = "/docs/contract/decodeEventLog";
+function decodeEventLog(parameters) {
+  const { abi, data, strict: strict_, topics } = parameters;
+  const strict = strict_ ?? true;
+  const [signature, ...argTopics] = topics;
+  if (!signature)
+    throw new AbiEventSignatureEmptyTopicsError({ docsPath: docsPath2 });
+  const abiItem = abi.find((x) => x.type === "event" && signature === toEventSelector(formatAbiItem2(x)));
+  if (!(abiItem && ("name" in abiItem)) || abiItem.type !== "event")
+    throw new AbiEventSignatureNotFoundError(signature, { docsPath: docsPath2 });
+  const { name, inputs } = abiItem;
+  const isUnnamed = inputs?.some((x) => !(("name" in x) && x.name));
+  const args = isUnnamed ? [] : {};
+  const indexedInputs = inputs.map((x, i2) => [x, i2]).filter(([x]) => ("indexed" in x) && x.indexed);
+  for (let i2 = 0;i2 < indexedInputs.length; i2++) {
+    const [param, argIndex] = indexedInputs[i2];
+    const topic = argTopics[i2];
+    if (!topic)
+      throw new DecodeLogTopicsMismatch({
+        abiItem,
+        param
+      });
+    args[isUnnamed ? argIndex : param.name || argIndex] = decodeTopic({
+      param,
+      value: topic
+    });
+  }
+  const nonIndexedInputs = inputs.filter((x) => !(("indexed" in x) && x.indexed));
+  if (nonIndexedInputs.length > 0) {
+    if (data && data !== "0x") {
+      try {
+        const decodedData = decodeAbiParameters(nonIndexedInputs, data);
+        if (decodedData) {
+          if (isUnnamed)
+            for (let i2 = 0;i2 < inputs.length; i2++)
+              args[i2] = args[i2] ?? decodedData.shift();
+          else
+            for (let i2 = 0;i2 < nonIndexedInputs.length; i2++)
+              args[nonIndexedInputs[i2].name] = decodedData[i2];
+        }
+      } catch (err) {
+        if (strict) {
+          if (err instanceof AbiDecodingDataSizeTooSmallError || err instanceof PositionOutOfBoundsError)
+            throw new DecodeLogDataMismatch({
+              abiItem,
+              data,
+              params: nonIndexedInputs,
+              size: size(data)
+            });
+          throw err;
+        }
+      }
+    } else if (strict) {
+      throw new DecodeLogDataMismatch({
+        abiItem,
+        data: "0x",
+        params: nonIndexedInputs,
+        size: 0
+      });
+    }
+  }
+  return {
+    eventName: name,
+    args: Object.values(args).length > 0 ? args : undefined
+  };
+}
+function decodeTopic({ param, value: value2 }) {
+  if (param.type === "string" || param.type === "bytes" || param.type === "tuple" || param.type.match(/^(.*)\[(\d+)?\]$/))
+    return value2;
+  const decodedArg = decodeAbiParameters([param], value2) || [];
+  return decodedArg[0];
+}
 var zeroAddress = "0x0000000000000000000000000000000000000000";
 init_decodeFunctionResult();
 init_encodeFunctionData();
+init_toHex();
+init_keccak256();
 var IERC20 = [
   {
     anonymous: false,
@@ -16633,6 +17504,52 @@ var FundVaultAbi = [
         name: "strategy",
         type: "string",
         internalType: "string"
+      },
+      {
+        name: "aaveSupplyAmount",
+        type: "uint256",
+        internalType: "uint256"
+      },
+      {
+        name: "aaveWithdrawAmount",
+        type: "uint256",
+        internalType: "uint256"
+      },
+      {
+        name: "compSupplyAmount",
+        type: "uint256",
+        internalType: "uint256"
+      },
+      {
+        name: "compWithdrawAmount",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
+  },
+  {
+    type: "function",
+    name: "rebalanceRiskThreshold",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint8",
+        internalType: "uint8"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    name: "setRebalanceRiskThreshold",
+    inputs: [
+      {
+        name: "newThreshold",
+        type: "uint8",
+        internalType: "uint8"
       }
     ],
     outputs: [],
@@ -17899,24 +18816,27 @@ class FirebaseClient {
     };
   }
 }
-var configSchema = exports_external.object({
-  schedule: exports_external.string(),
+var evmChainSchema = exports_external.object({
+  chainName: exports_external.string(),
   proofOfReserveOracleAddress: exports_external.string(),
   fundVaultAddress: exports_external.string(),
   mockUSDCAddress: exports_external.string(),
-  chainSelectorName: exports_external.string(),
-  gasLimit: exports_external.string(),
+  gasLimit: exports_external.string()
+});
+var configSchema = exports_external.object({
+  schedule: exports_external.string(),
+  evms: exports_external.array(evmChainSchema),
   firebaseApiKey: exports_external.string(),
   firebaseProjectId: exports_external.string()
 });
-var getTotalAssets = (runtime2) => {
+var getTotalAssets = (runtime2, chain) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const callData = encodeFunctionData({
@@ -17926,7 +18846,7 @@ var getTotalAssets = (runtime2) => {
   const contractCall = evmClient.callContract(runtime2, {
     call: encodeCallMsg({
       from: zeroAddress,
-      to: runtime2.config.fundVaultAddress,
+      to: chain.fundVaultAddress,
       data: callData
     }),
     blockNumber: LAST_FINALIZED_BLOCK_NUMBER
@@ -17938,25 +18858,25 @@ var getTotalAssets = (runtime2) => {
   });
   return totalAssets;
 };
-var getActualBalance = (runtime2) => {
+var getActualBalance = (runtime2, chain) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const callData = encodeFunctionData({
     abi: IERC20,
     functionName: "balanceOf",
-    args: [runtime2.config.fundVaultAddress]
+    args: [chain.fundVaultAddress]
   });
   const contractCall = evmClient.callContract(runtime2, {
     call: encodeCallMsg({
       from: zeroAddress,
-      to: runtime2.config.mockUSDCAddress,
+      to: chain.mockUSDCAddress,
       data: callData
     }),
     blockNumber: LAST_FINALIZED_BLOCK_NUMBER
@@ -17968,14 +18888,14 @@ var getActualBalance = (runtime2) => {
   });
   return balance;
 };
-var getCurrentReserves = (runtime2) => {
+var getCurrentReserves = (runtime2, chain) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const callData = encodeFunctionData({
@@ -17985,7 +18905,7 @@ var getCurrentReserves = (runtime2) => {
   const contractCall = evmClient.callContract(runtime2, {
     call: encodeCallMsg({
       from: zeroAddress,
-      to: runtime2.config.proofOfReserveOracleAddress,
+      to: chain.proofOfReserveOracleAddress,
       data: callData
     }),
     blockNumber: LAST_FINALIZED_BLOCK_NUMBER
@@ -17998,18 +18918,18 @@ var getCurrentReserves = (runtime2) => {
   const reserves = result;
   return BigInt(reserves.onChainReserves || 0);
 };
-var updateReserves = (runtime2, totalReserves, reportHash) => {
+var updateReserves = (runtime2, chain, totalReserves, reportHash) => {
   const network248 = getNetwork({
     chainFamily: "evm",
-    chainSelectorName: runtime2.config.chainSelectorName,
+    chainSelectorName: chain.chainName,
     isTestnet: true
   });
   if (!network248) {
-    throw new Error(`Network not found for chain selector: ${runtime2.config.chainSelectorName}`);
+    throw new Error(`Network not found for chain selector: ${chain.chainName}`);
   }
   const evmClient = new ClientCapability(network248.chainSelector.selector);
   const logger = new StructuredLogger(runtime2);
-  logger.info("Updating ProofOfReserveOracle", {
+  logger.info(`Updating ProofOfReserveOracle on ${chain.chainName}`, {
     totalReserves: `$${(Number(totalReserves) / 1e6).toLocaleString()}`,
     reportHash
   });
@@ -18025,47 +18945,64 @@ var updateReserves = (runtime2, totalReserves, reportHash) => {
     hashingAlgo: "keccak256"
   }).result();
   const resp = evmClient.writeReport(runtime2, {
-    receiver: runtime2.config.proofOfReserveOracleAddress,
+    receiver: chain.proofOfReserveOracleAddress,
     report: reportResponse,
     gasConfig: {
-      gasLimit: runtime2.config.gasLimit
+      gasLimit: chain.gasLimit
     }
   }).result();
   if (resp.txStatus !== TxStatus.SUCCESS) {
-    throw new Error(`Failed to update ProofOfReserveOracle: ${resp.errorMessage || resp.txStatus}`);
+    throw new Error(`Failed to update ProofOfReserveOracle on ${chain.chainName}: ${resp.errorMessage || resp.txStatus}`);
   }
   const txHash = bytesToHex(resp.txHash || new Uint8Array(32));
-  logger.success("ProofOfReserveOracle updated", { txHash });
+  logger.success(`ProofOfReserveOracle updated on ${chain.chainName}`, {
+    txHash
+  });
   return txHash;
 };
 var runProofOfReserveWorkflow = async (runtime2) => {
   const logger = new StructuredLogger(runtime2);
-  logger.info("\uD83D\uDE80 Starting Production Proof of Reserve Verification");
+  logger.info(`\uD83D\uDE80 Starting Multi-chain Proof of Reserve Verification (${runtime2.config.evms.length} chains)`);
   return withErrorHandling(async () => {
-    const totalAssets = getTotalAssets(runtime2);
-    const assetsInUSDC = Number(totalAssets) / 1e6;
-    logger.info("Total assets", {
-      totalAssets: `$${assetsInUSDC.toLocaleString()}`
-    });
-    const actualBalance = getActualBalance(runtime2);
-    const balanceInUSDC = Number(actualBalance) / 1e6;
-    logger.info("Actual USDC balance", {
-      balance: `$${balanceInUSDC.toLocaleString()}`
-    });
-    const totalReserves = actualBalance;
-    const reservesInUSDC = Number(totalReserves) / 1e6;
-    logger.info("Total reserves", {
-      reserves: `$${reservesInUSDC.toLocaleString()}`
-    });
-    let reserveRatio = 1e4;
-    if (totalAssets > 0n) {
-      reserveRatio = Number(totalReserves * 10000n / totalAssets);
+    let aggregatedAssets = BigInt(0);
+    let aggregatedBalance = BigInt(0);
+    const chainReports = [];
+    for (const chain of runtime2.config.evms) {
+      const totalAssets = getTotalAssets(runtime2, chain);
+      const assetsInUSDC = Number(totalAssets) / 1e6;
+      const actualBalance = getActualBalance(runtime2, chain);
+      const balanceInUSDC = Number(actualBalance) / 1e6;
+      let reserveRatio = 1e4;
+      if (totalAssets > 0n) {
+        reserveRatio = Number(actualBalance * 10000n / totalAssets);
+      }
+      aggregatedAssets += totalAssets;
+      aggregatedBalance += actualBalance;
+      chainReports.push({
+        chainName: chain.chainName,
+        totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+        balance: `$${balanceInUSDC.toLocaleString()}`,
+        ratio: `${(reserveRatio / 100).toFixed(2)}%`
+      });
+      logger.info(`Chain ${chain.chainName} reserves`, {
+        totalAssets: `$${assetsInUSDC.toLocaleString()}`,
+        balance: `$${balanceInUSDC.toLocaleString()}`,
+        ratio: `${(reserveRatio / 100).toFixed(2)}%`
+      });
     }
-    logger.info("Reserve ratio", {
-      ratio: `${(reserveRatio / 100).toFixed(2)}%`
+    let overallRatio = 1e4;
+    if (aggregatedAssets > 0n) {
+      overallRatio = Number(aggregatedBalance * 10000n / aggregatedAssets);
+    }
+    logger.info("Aggregated reserves", {
+      totalAssets: `$${(Number(aggregatedAssets) / 1e6).toLocaleString()}`,
+      totalBalance: `$${(Number(aggregatedBalance) / 1e6).toLocaleString()}`,
+      overallRatio: `${(overallRatio / 100).toFixed(2)}%`,
+      chains: runtime2.config.evms.length
     });
-    const currentReserves = getCurrentReserves(runtime2);
-    const diff = totalReserves > currentReserves ? totalReserves - currentReserves : currentReserves - totalReserves;
+    const primaryChain = runtime2.config.evms[0];
+    const currentReserves = getCurrentReserves(runtime2, primaryChain);
+    const diff = aggregatedBalance > currentReserves ? aggregatedBalance - currentReserves : currentReserves - aggregatedBalance;
     if (diff < 1000000n) {
       logger.info("Reserve change too small, skipping update");
       return "No update needed";
@@ -18073,32 +19010,58 @@ var runProofOfReserveWorkflow = async (runtime2) => {
     const firebase = new FirebaseClient(runtime2, runtime2.config.firebaseApiKey, runtime2.config.firebaseProjectId);
     const ipfsHash = firebase.uploadReserveReport(runtime2, {
       timestamp: Date.now(),
-      totalReserves: `$${reservesInUSDC.toLocaleString()} USDC`,
-      actualBalance: `$${balanceInUSDC.toLocaleString()} USDC`,
-      reserveRatio: `${(reserveRatio / 100).toFixed(2)}%`,
-      attestation: "On-chain USDC balance verified"
+      totalReserves: `$${(Number(aggregatedBalance) / 1e6).toLocaleString()} USDC`,
+      actualBalance: `$${(Number(aggregatedBalance) / 1e6).toLocaleString()} USDC`,
+      reserveRatio: `${(overallRatio / 100).toFixed(2)}%`,
+      attestation: "On-chain USDC balance verified across all chains",
+      chains: chainReports
     });
     logger.success("PoR report uploaded to Firebase", { ipfsHash });
-    const txHash = updateReserves(runtime2, totalReserves, ipfsHash);
-    logger.success("✅ Proof of Reserve Verification Complete", {
-      txHash,
+    const txHashes = [];
+    for (const chain of runtime2.config.evms) {
+      const txHash = updateReserves(runtime2, chain, aggregatedBalance, ipfsHash);
+      txHashes.push(txHash);
+    }
+    logger.success("✅ Multi-chain Proof of Reserve Verification Complete", {
+      txHashes,
       ipfsHash,
-      reserveRatio: `${(reserveRatio / 100).toFixed(2)}%`
+      reserveRatio: `${(overallRatio / 100).toFixed(2)}%`,
+      chainsUpdated: runtime2.config.evms.length
     });
-    return txHash;
+    return txHashes.join(",");
   }, { operation: "Proof of Reserve Verification", runtime: runtime2 });
 };
-var onCronTrigger = async (runtime2, payload) => {
-  runtime2.log("⏰ Cron triggered - starting PoR verification");
+var eventAbi = parseAbi([
+  "event ReserveVerificationRequested(address indexed requester, uint256 timestamp)"
+]);
+var eventSignature = "ReserveVerificationRequested(address,uint256)";
+var onLogTrigger = async (runtime2, log) => {
+  const topics = log.topics.map((t) => bytesToHex(t));
+  const data = bytesToHex(log.data);
+  const decodedLog = decodeEventLog({ abi: eventAbi, data, topics });
+  runtime2.log(`ReserveVerificationRequested by ${decodedLog.args.requester} at ${decodedLog.args.timestamp}`);
   return runProofOfReserveWorkflow(runtime2);
 };
 var initWorkflow = (config) => {
-  const cronTrigger = new CronCapability;
-  return [
-    handler(cronTrigger.trigger({
-      schedule: config.schedule
-    }), onCronTrigger)
-  ];
+  const eventHash = keccak256(toHex(eventSignature));
+  const handlers = [];
+  for (const chain of config.evms) {
+    const network248 = getNetwork({
+      chainFamily: "evm",
+      chainSelectorName: chain.chainName,
+      isTestnet: true
+    });
+    if (!network248) {
+      throw new Error(`Network not found: ${chain.chainName}`);
+    }
+    const evmClient = new cre.capabilities.EVMClient(network248.chainSelector.selector);
+    handlers.push(cre.handler(evmClient.logTrigger({
+      addresses: [chain.proofOfReserveOracleAddress],
+      topics: [{ values: [eventHash] }],
+      confidence: "CONFIDENCE_LEVEL_FINALIZED"
+    }), onLogTrigger));
+  }
+  return handlers;
 };
 async function main() {
   const runner = await Runner.newRunner({

@@ -21,15 +21,23 @@ import {
   useTotalAssets,
   useRiskScore,
   useRebalancingHistory,
+  useActiveChainContracts,
 } from "@/hooks/useContractData";
-import { CONTRACTS, fundVaultAbi } from "@/lib/contracts";
+import {
+  CONTRACTS,
+  fundVaultAbi,
+  SUPPORTED_CHAINS,
+} from "@/lib/contracts";
 import {
   useWriteContract,
   useWaitForTransactionReceipt,
   useAccount,
 } from "wagmi";
-import { Loader2, ExternalLink, RefreshCw } from "lucide-react";
+import { Loader2, ExternalLink, RefreshCw, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCCIPBridge } from "@/hooks/useCCIPBridge";
+import { useState } from "react";
+import { parseUnits, formatUnits, type Address } from "viem";
 
 const scatterData = [
   { risk: 15, return: 4.2, name: "Stablecoins" },
@@ -52,6 +60,28 @@ export default function Rebalancing() {
   useRiskScore();
   const { history: rebalancingHistory, isLoading: historyLoading } =
     useRebalancingHistory();
+
+  // Cross-chain bridge state
+  const [bridgeAmount, setBridgeAmount] = useState("");
+  const { address } = useAccount();
+  const { chainId } = useActiveChainContracts();
+  const parsedAmount =
+    bridgeAmount && !isNaN(Number(bridgeAmount))
+      ? parseUnits(bridgeAmount, 18)
+      : BigInt(0);
+
+  const {
+    destChainName,
+    bridgeFee,
+    isFeeLoading,
+    bridgeShares: doBridge,
+    txHash: bridgeTxHash,
+    isPending: isBridging,
+    isSuccess: isBridgeSuccess,
+    isWriteError: isBridgeError,
+    writeError: bridgeWriteError,
+    reset: resetBridge,
+  } = useCCIPBridge(address as Address | undefined, parsedAmount);
 
   const displayAllocation = allocation ?? mockAllocation;
   const isLive = allocation !== undefined;
@@ -286,10 +316,121 @@ export default function Rebalancing() {
           </ResponsiveContainer>
         </div>
 
-        {/* History */}
+        {/* Cross-Chain Bridge */}
         <div
           className="glass-card rounded-xl p-5 opacity-0 animate-fade-in-up"
           style={{ animationDelay: "300ms" }}
+        >
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <ArrowRightLeft className="h-4 w-4" />
+            Cross-Chain Bridge (CCIP)
+          </h3>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Source Chain
+                </label>
+                <p className="text-sm font-medium text-foreground">
+                  {SUPPORTED_CHAINS.find((c) => c.id === chainId)?.name ??
+                    "Unknown"}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Destination Chain
+                </label>
+                <p className="text-sm font-medium text-foreground">
+                  {destChainName}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">
+                  Amount (WRWA Shares)
+                </label>
+                <input
+                  type="number"
+                  placeholder="0.0"
+                  value={bridgeAmount}
+                  onChange={(e) => {
+                    resetBridge();
+                    setBridgeAmount(e.target.value);
+                  }}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Estimated CCIP Fee
+                </label>
+                <p className="text-sm font-medium text-foreground">
+                  {isFeeLoading
+                    ? "Estimating…"
+                    : bridgeFee
+                      ? `${formatUnits(bridgeFee, 18)} ETH`
+                      : "Enter amount"}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Receiver
+                </label>
+                <p className="text-xs font-mono text-muted-foreground truncate">
+                  {address
+                    ? `${address.slice(0, 10)}…${address.slice(-8)}`
+                    : "Connect wallet"}
+                </p>
+              </div>
+
+              <Button
+                onClick={doBridge}
+                disabled={
+                  !isConnected ||
+                  isBridging ||
+                  !bridgeFee ||
+                  parsedAmount === BigInt(0)
+                }
+                className="w-full gap-2 bg-gradient-to-r from-accent to-primary hover:opacity-90 text-primary-foreground border-0"
+              >
+                {isBridging ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowRightLeft className="h-4 w-4" />
+                )}
+                {isBridging ? "Confirm in wallet…" : "Bridge Shares"}
+              </Button>
+
+              {isBridgeSuccess && bridgeTxHash && (
+                <div className="flex items-center gap-2 text-xs text-success">
+                  <span>Bridged!</span>
+                  <a
+                    href={`https://ccip.chain.link/msg/${bridgeTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline font-mono"
+                  >
+                    Track on CCIP Explorer
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+              {isBridgeError && (
+                <p className="text-xs text-destructive">
+                  {bridgeWriteError?.message?.slice(0, 100) ?? "Bridge failed"}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* History */}
+        <div
+          className="glass-card rounded-xl p-5 opacity-0 animate-fade-in-up"
+          style={{ animationDelay: "400ms" }}
         >
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Rebalancing History
