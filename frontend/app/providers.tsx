@@ -8,7 +8,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 
 const config = getDefaultConfig({
   appName: "Watchtower DeFi Console",
-  projectId: "YOUR_PROJECT_ID", // TODO: Replace with WalletConnect Project ID
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "",
   chains: [mainnet, sepolia, baseSepolia],
   ssr: true,
 });

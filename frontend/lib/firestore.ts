@@ -1,8 +1,8 @@
 // Firestore REST API client for reading CRE workflow reports
 // Reads from the same Firestore collections the CRE workflows write to
 
-const FIREBASE_API_KEY = "AIzaSyAByz16WVkCora7xwobOJMqVepNCfs8iO8";
-const FIREBASE_PROJECT_ID = "watchtower-bdfa8";
+const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "";
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "";
 
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
