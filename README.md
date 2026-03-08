@@ -1,7 +1,6 @@
 # 🏰 Watchtower — Institutional DeFi Risk Management
 
-> **AI-powered, compliance-first vault management** built on Chainlink CRE.  
-> _Hackathon submission for the Chainlink Hackathon 2026._
+> **AI-powered, compliance-first vault management** built on Chainlink CRE.
 
 ---
 
@@ -14,7 +13,7 @@ Watchtower is an institutional-grade DeFi risk management platform that uses **C
 - **Proof of Reserve** verification using Chainlink PoR feeds
 - **AI-powered rebalancing** recommendations with IPFS-pinned reports
 - **Cross-chain share bridging** via Chainlink CCIP (Sepolia + Base Sepolia)
-- **Real-time dashboard** with wallet connectivity (RainbowKit)
+- **Real-time dashboard** with wallet connectivity
 
 ---
 
@@ -125,9 +124,6 @@ Contracts are already deployed and verified on Sepolia — see [deployments/sepo
 cd cre-workflow
 cp .env.example .env
 # Fill in API keys (Gemini, Chainalysis, Pinata)
-
-# Run a workflow locally
-cre-cli ws run portfolio-health-workflow -t staging-settings
 ```
 
 See [LOCAL_DEVELOPMENT.md](cre-workflow/LOCAL_DEVELOPMENT.md) for detailed instructions.
@@ -147,25 +143,25 @@ npm run dev
 
 ### Ethereum Sepolia
 
-| Contract                 | Address         | Etherscan                                                                                          |
-| :----------------------- | :-------------- | :------------------------------------------------------------------------------------------------- |
-| **ComplianceRegistry**   | `0x1649...1c56` | [View](https://sepolia.etherscan.io/address/0x164940bd662A21174dd5Db21AECc1Ae46d8b1c56)            |
-| **RiskOracle**           | `0x1723...28A7` | [View](https://sepolia.etherscan.io/address/0x17238806EdDcF45c0e85eE3FC74ad7A2e4f128A7)            |
-| **ProofOfReserveOracle** | `0xcb66...d52`  | [View](https://sepolia.etherscan.io/address/0xcb66fe00e909E86Fb2F392DD0c2122E1ac7Eed52)            |
-| **FundVault**            | `0x27b2...6ED2` | [View](https://sepolia.etherscan.io/address/0x27b2e0AF46B4E63749DF2Ef4325FDa82F9b86ED2)            |
-| **MockUSDC**             | `0x57a1...E4707D` | [View](https://sepolia.etherscan.io/address/0x57a1c6761Ccade88c5eA2735BfbAC0EA83E4707D)          |
-| **BurnMintTokenPool**    | `0xe733...86c3` | [View](https://sepolia.etherscan.io/address/0xe733a69A7DdAD406a8F0585417c1fCE9644586c3)            |
+| Contract                 | Address           | Etherscan                                                                               |
+| :----------------------- | :---------------- | :-------------------------------------------------------------------------------------- |
+| **ComplianceRegistry**   | `0x1649...1c56`   | [View](https://sepolia.etherscan.io/address/0x164940bd662A21174dd5Db21AECc1Ae46d8b1c56) |
+| **RiskOracle**           | `0x1723...28A7`   | [View](https://sepolia.etherscan.io/address/0x17238806EdDcF45c0e85eE3FC74ad7A2e4f128A7) |
+| **ProofOfReserveOracle** | `0xcb66...d52`    | [View](https://sepolia.etherscan.io/address/0xcb66fe00e909E86Fb2F392DD0c2122E1ac7Eed52) |
+| **FundVault**            | `0x27b2...6ED2`   | [View](https://sepolia.etherscan.io/address/0x27b2e0AF46B4E63749DF2Ef4325FDa82F9b86ED2) |
+| **MockUSDC**             | `0x57a1...E4707D` | [View](https://sepolia.etherscan.io/address/0x57a1c6761Ccade88c5eA2735BfbAC0EA83E4707D) |
+| **BurnMintTokenPool**    | `0xe733...86c3`   | [View](https://sepolia.etherscan.io/address/0xe733a69A7DdAD406a8F0585417c1fCE9644586c3) |
 
 ### Base Sepolia
 
-| Contract                 | Address         | Etherscan                                                                                          |
-| :----------------------- | :-------------- | :------------------------------------------------------------------------------------------------- |
-| **ComplianceRegistry**   | `0xB14a...cFA0` | [View](https://sepolia.basescan.org/address/0xB14a5927b20927A8812AC060c00CBE17772CcFA0)            |
-| **RiskOracle**           | `0xe476...cf4B` | [View](https://sepolia.basescan.org/address/0xe47691F0188D8BD9013e1a5cCaF34baD0b37cf4B)            |
-| **ProofOfReserveOracle** | `0x892C...053c` | [View](https://sepolia.basescan.org/address/0x892C2C0eD81f80Ba727af29c7A128A4A2e9d053c)            |
-| **FundVault**            | `0x7857...858D` | [View](https://sepolia.basescan.org/address/0x785708dD1753fdEAc9C3d1aaC02f5c0cd3B1858D)            |
-| **MockUSDC**             | `0xe41e...2D8f` | [View](https://sepolia.basescan.org/address/0xe41e15b91Ae30f3cB4f0193c4ca1f00c82342D8f)            |
-| **BurnMintTokenPool**    | `0xAF4F...66Ad` | [View](https://sepolia.basescan.org/address/0xAF4Fc00dA34DED131E1868Ae97a6D56eEf8D66Ad)            |
+| Contract                 | Address         | Etherscan                                                                               |
+| :----------------------- | :-------------- | :-------------------------------------------------------------------------------------- |
+| **ComplianceRegistry**   | `0xB14a...cFA0` | [View](https://sepolia.basescan.org/address/0xB14a5927b20927A8812AC060c00CBE17772CcFA0) |
+| **RiskOracle**           | `0xe476...cf4B` | [View](https://sepolia.basescan.org/address/0xe47691F0188D8BD9013e1a5cCaF34baD0b37cf4B) |
+| **ProofOfReserveOracle** | `0x892C...053c` | [View](https://sepolia.basescan.org/address/0x892C2C0eD81f80Ba727af29c7A128A4A2e9d053c) |
+| **FundVault**            | `0x7857...858D` | [View](https://sepolia.basescan.org/address/0x785708dD1753fdEAc9C3d1aaC02f5c0cd3B1858D) |
+| **MockUSDC**             | `0xe41e...2D8f` | [View](https://sepolia.basescan.org/address/0xe41e15b91Ae30f3cB4f0193c4ca1f00c82342D8f) |
+| **BurnMintTokenPool**    | `0xAF4F...66Ad` | [View](https://sepolia.basescan.org/address/0xAF4Fc00dA34DED131E1868Ae97a6D56eEf8D66Ad) |
 
 FundVault is registered as a native **Chainlink CCIP** burn/mint token on both chains, enabling cross-chain share transfers via `bridgeShares()`.
 
@@ -209,16 +205,16 @@ See [deployments/sepolia.md](smart-contracts/deployments/sepolia.md) for full de
 
 ## ⚙️ Tech Stack
 
-| Layer           | Technology                            |
-| :-------------- | :------------------------------------ |
+| Layer           | Technology                                      |
+| :-------------- | :---------------------------------------------- |
 | Smart Contracts | Solidity, Foundry, OpenZeppelin, Chainlink CCIP |
-| CRE Workflows   | TypeScript, Chainlink CRE CLI         |
-| AI/ML           | Google Gemini 2.5 Flash               |
-| Compliance      | Chainalysis Sanctions API             |
-| Storage         | Pinata (IPFS)                         |
-| Frontend        | Next.js 16, Tailwind CSS 4, Shadcn UI |
-| Web3            | Wagmi, Viem, RainbowKit               |
-| Charts          | Recharts                              |
+| CRE Workflows   | TypeScript, Chainlink CRE CLI                   |
+| AI/ML           | Google Gemini 2.5 Flash                         |
+| Compliance      | Chainalysis Sanctions API                       |
+| Storage         | Pinata (IPFS)                                   |
+| Frontend        | Next.js 16, Tailwind CSS 4, Shadcn UI           |
+| Web3            | Wagmi, Viem, RainbowKit                         |
+| Charts          | Recharts                                        |
 
 ---
 

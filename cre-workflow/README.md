@@ -1,8 +1,29 @@
 # Watchtower CRE Workflows
 
-Off-chain automation workflows built on the **Chainlink Compute Runtime Environment (CRE)** that power Watchtower's real-time risk monitoring, compliance screening, reserve verification, and AI-driven rebalancing.
+## The Problem Watchtower Solves
 
-## Overview
+Institutional DeFi fund management today is fragmented and dangerously manual. Fund managers must:
+
+- **Manually monitor portfolio risk** across multiple chains and protocols, with no automated early-warning system for cascading liquidation events, smart contract exploits, or sudden market drawdowns.
+- **Run compliance checks by hand** — every investor address needs KYC verification and sanctions screening before deposits, and ongoing monitoring for regulatory changes. Missing a sanctioned address means legal liability; false positives mean lost investors.
+- **Trust opaque reserve reports** — investors have no way to independently verify that a fund's reported assets match what's actually on-chain. Traditional audits are periodic, slow, and centralized.
+- **React to market conditions too late** — by the time a human analyst identifies that a portfolio is over-concentrated in a failing protocol, the damage is done. Rebalancing decisions need real-time data and fast execution.
+
+These aren't edge cases — they're daily operational risks for any institutional DeFi fund. The core challenge is that **critical fund operations require continuous, automated, trustless computation** that reads on-chain state, processes it with off-chain intelligence (AI, sanctions databases, reserve proofs), and writes enforceable results back on-chain — all without a single point of failure.
+
+## How CRE Solves It
+
+The **Chainlink Compute Runtime Environment (CRE)** is the missing infrastructure layer. CRE allows developers to write TypeScript workflows that run on Chainlink's decentralized oracle network (DON) — the same nodes that secure billions in DeFi already. This gives Watchtower three critical properties no centralized backend can provide:
+
+1. **Decentralized Execution** — Workflows don't run on a single server. They execute across multiple independent Chainlink nodes with consensus verification. No single operator can manipulate risk scores, fake compliance approvals, or forge reserve attestations.
+
+2. **On-Chain Enforcement** — CRE workflows don't just generate reports — they write results directly to smart contracts using cryptographically signed transactions. The `FundVault` contract reads these oracle values on every deposit, withdrawal, and transfer, automatically blocking operations that violate risk thresholds, compliance rules, or reserve requirements. There's no gap between "detection" and "enforcement."
+
+3. **Continuous Automation** — CRE workflows are triggered by on-chain events (via `LogTrigger`) or scheduled intervals. They run 24/7 without human intervention, eliminating the response-time gap that makes manual monitoring dangerous.
+
+In Watchtower, CRE replaces what would traditionally be four separate backend services (risk engine, compliance API, reserve auditor, rebalancing bot) with four TypeScript workflows that run on decentralized infrastructure and write enforceable results on-chain.
+
+## Architecture Overview
 
 These workflows form the off-chain intelligence layer of Watchtower. Each workflow runs autonomously on the Chainlink decentralized oracle network, reads on-chain state from smart contracts, processes data through external APIs (Gemini AI, Chainalysis, Pinata IPFS), and writes results back on-chain — creating a continuous feedback loop between off-chain computation and on-chain enforcement.
 
