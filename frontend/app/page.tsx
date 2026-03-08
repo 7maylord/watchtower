@@ -15,7 +15,12 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  useTotalAssets,
+  useReserveData,
+  useComplianceHistory,
+} from "@/hooks/useContractData";
 
 const features = [
   {
@@ -52,16 +57,27 @@ const features = [
   },
 ];
 
-const stats = [
-  { value: "$2.4M", label: "Assets Monitored" },
-  { value: "99.8%", label: "Reserve Ratio" },
-  { value: "247", label: "Addresses Screened" },
-  { value: "<15min", label: "Update Interval" },
-];
-
 export default function LandingPage() {
   const { isConnected } = useAccount();
   const router = useRouter();
+  const { totalAssets } = useTotalAssets();
+  const { reserveRatio } = useReserveData();
+  const { history: complianceHistory } = useComplianceHistory();
+
+  const displayAssets = totalAssets
+    ? totalAssets >= 1e6
+      ? `$${(totalAssets / 1e6).toFixed(1)}M`
+      : totalAssets >= 1e3
+        ? `$${(totalAssets / 1e3).toFixed(1)}K`
+        : `$${totalAssets.toFixed(2)}`
+    : "$0";
+
+  const stats = [
+    { value: displayAssets, label: "Assets Monitored" },
+    { value: reserveRatio ? `${reserveRatio.toFixed(1)}%` : "—", label: "Reserve Ratio" },
+    { value: String(complianceHistory.length), label: "Addresses Screened" },
+    { value: "<15min", label: "Update Interval" },
+  ];
 
   useEffect(() => {
     if (isConnected) {

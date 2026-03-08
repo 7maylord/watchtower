@@ -66,11 +66,16 @@ export default function Compliance() {
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            { label: "Total Screened", value: "247", icon: ShieldCheck },
-            { label: "Flagged", value: "3", icon: ShieldAlert },
-            { label: "Approval Rate", value: "98.8%", icon: CheckCircle },
-          ].map((s, i) => (
+          {(() => {
+            const total = complianceHistory.length;
+            const flagged = complianceHistory.filter((c) => c.status === "flagged").length;
+            const rate = total > 0 ? (((total - flagged) / total) * 100).toFixed(1) : "0";
+            return [
+              { label: "Total Screened", value: String(total), icon: ShieldCheck },
+              { label: "Flagged", value: String(flagged), icon: ShieldAlert },
+              { label: "Approval Rate", value: `${rate}%`, icon: CheckCircle },
+            ];
+          })().map((s, i) => (
             <div
               key={i}
               className="glass-card rounded-xl p-5 opacity-0 animate-fade-in-up"

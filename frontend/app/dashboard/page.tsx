@@ -22,11 +22,13 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import StatusBadge from "@/components/StatusBadge";
 import RiskGauge from "@/components/RiskGauge";
-import { riskScoreHistory, recentActivity } from "@/lib/mock-data";
 import {
   useRiskScore,
   useReserveData,
   useShouldLiquidate,
+  useRiskReports,
+  useComplianceHistory,
+  useRebalancingHistory,
   formatTimeAgo,
 } from "@/hooks/useContractData";
 
@@ -73,10 +75,49 @@ export default function DashboardPage() {
   } = useReserveData();
   const { shouldLiquidate } = useShouldLiquidate();
 
-  const displayScore = score ?? 32; // fallback to mock
-  const displayRatio = reserveRatio ?? 99.8;
-  const displayOnChain = onChainReserves ?? 2.39;
-  const displayCustodian = custodianReserves ?? 2.4;
+  // Firestore data
+  const { reports: riskReports, isLoading: riskReportsLoading } = useRiskReports();
+  const { history: complianceHistory } = useComplianceHistory();
+  const { history: rebalancingHistory } = useRebalancingHistory();
+
+  // Build risk score history chart from Firestore
+  const riskScoreHistory = riskReports.map((r) => ({
+    date: r.date,
+    score: r.score,
+  }));
+
+  // Build recent activity from all Firestore sources
+  const recentActivity = [
+    ...riskReports.slice(0, 3).map((r, i) => ({
+      id: i + 1,
+      workflow: "Portfolio Health Analysis",
+      status: (r.status === "critical" ? "error" : r.status === "moderate" ? "warning" : "success") as "success" | "warning" | "error",
+      time: r.date,
+      details: `Risk score: ${r.score}/100`,
+    })),
+    ...complianceHistory.slice(0, 3).map((c, i) => ({
+      id: i + 100,
+      workflow: "Compliance Screening",
+      status: (c.status === "flagged" ? "error" : "success") as "success" | "warning" | "error",
+      time: c.date,
+      details: `${c.address} - ${c.status === "flagged" ? "FLAGGED" : "Approved"}`,
+    })),
+    ...rebalancingHistory.slice(0, 2).map((r, i) => ({
+      id: i + 200,
+      workflow: "Rebalancing Check",
+      status: "success" as const,
+      time: r.date,
+      details: r.action,
+    })),
+  ].slice(0, 8);
+
+  // Latest rebalancing recommendation
+  const latestRebalance = rebalancingHistory[0];
+
+  const displayScore = score ?? 0;
+  const displayRatio = reserveRatio ?? 0;
+  const displayOnChain = onChainReserves ?? 0;
+  const displayCustodian = custodianReserves ?? 0;
 
   return (
     <DashboardLayout>
@@ -127,7 +168,9 @@ export default function DashboardPage() {
           <StatCard icon={ShieldCheck} title="Compliance" delay={100}>
             <StatusBadge status="approved" />
             <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-foreground">247</span>
+              <span className="text-2xl font-bold text-foreground">
+                {complianceHistory.length}
+              </span>
               <span className="text-xs text-muted-foreground">
                 addresses screened
               </span>
@@ -154,8 +197,18 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
-                  <span>${displayOnChain.toFixed(2)}M</span> /{" "}
-                  <span>${displayCustodian.toFixed(2)}M reported</span>
+                  <span>
+                    {displayOnChain >= 1e3
+                      ? `$${(displayOnChain / 1e3).toFixed(1)}K`
+                      : `$${displayOnChain.toFixed(2)}`}
+                  </span>{" "}
+                  /{" "}
+                  <span>
+                    {displayCustodian >= 1e3
+                      ? `$${(displayCustodian / 1e3).toFixed(1)}K`
+                      : `$${displayCustodian.toFixed(2)}`}{" "}
+                    reported
+                  </span>
                 </div>
               </>
             )}
@@ -164,12 +217,16 @@ export default function DashboardPage() {
           <StatCard icon={ArrowLeftRight} title="Rebalancing" delay={300}>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-3 py-1 text-sm font-semibold text-success border border-success/20">
-                HOLD
+                {latestRebalance?.action ?? "—"}
               </span>
             </div>
             <div className="mt-2 flex items-center gap-1">
               <span className="text-xs text-muted-foreground">Confidence:</span>
-              <span className="text-sm font-semibold text-foreground">92%</span>
+              <span className="text-sm font-semibold text-foreground">
+                {latestRebalance
+                  ? `${(latestRebalance.confidence * 100).toFixed(0)}%`
+                  : "—"}
+              </span>
             </div>
           </StatCard>
         </div>
@@ -183,42 +240,52 @@ export default function DashboardPage() {
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Risk Score History
             </h3>
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={riskScoreHistory}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="hsl(215, 28%, 17%)"
-                />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(224, 71%, 6%)",
-                    border: "1px solid hsl(215, 28%, 20%)",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    color: "hsl(213, 31%, 91%)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="score"
-                  stroke="hsl(217, 91%, 60%)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {riskReportsLoading ? (
+              <div className="flex items-center justify-center h-[260px]">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : riskScoreHistory.length === 0 ? (
+              <div className="flex items-center justify-center h-[260px] text-sm text-muted-foreground">
+                No risk reports yet — run a Portfolio Health workflow
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={riskScoreHistory}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(215, 28%, 17%)"
+                  />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(224, 71%, 6%)",
+                      border: "1px solid hsl(215, 28%, 20%)",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "hsl(213, 31%, 91%)",
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke="hsl(217, 91%, 60%)"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           <div
@@ -229,26 +296,32 @@ export default function DashboardPage() {
               Recent Activity
             </h3>
             <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
-              {recentActivity.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-3 rounded-lg bg-muted/30 p-3"
-                >
-                  <StatusBadge status={item.status} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {item.workflow}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.details}
-                    </p>
+              {recentActivity.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No activity yet — run a CRE workflow
+                </p>
+              ) : (
+                recentActivity.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-3 rounded-lg bg-muted/30 p-3"
+                  >
+                    <StatusBadge status={item.status} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {item.workflow}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.details}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                      <Clock className="h-3 w-3" />
+                      {item.time}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                    <Clock className="h-3 w-3" />
-                    {item.time}
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>

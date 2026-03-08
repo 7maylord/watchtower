@@ -348,6 +348,75 @@ export function useRebalancingHistory() {
 }
 
 // ============================================================
+// useRiskReports — reads risk reports from Firestore
+// ============================================================
+export type RiskReportEntry = {
+  date: string;
+  score: number;
+  status: "healthy" | "moderate" | "critical";
+  analysis: string;
+  documentId: string;
+};
+
+export function useRiskReports() {
+  const [reports, setReports] = useState<RiskReportEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const { fetchRiskReports } = await import("@/lib/firestore");
+        const data = await fetchRiskReports();
+        setReports(data);
+      } catch (e) {
+        console.error("Failed to fetch risk reports:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  return { reports, isLoading };
+}
+
+// ============================================================
+// useReserveReports — reads reserve reports from Firestore
+// ============================================================
+export type ReserveReportEntry = {
+  date: string;
+  totalReserves: string;
+  actualBalance: string;
+  reserveRatio: string;
+  attestation: string;
+  documentId: string;
+};
+
+export function useReserveReports() {
+  const [reports, setReports] = useState<ReserveReportEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const { fetchReserveReports } = await import("@/lib/firestore");
+        const data = await fetchReserveReports();
+        setReports(data);
+      } catch (e) {
+        console.error("Failed to fetch reserve reports:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  return { reports, isLoading };
+}
+
+// ============================================================
 // useComplianceHistory — reads compliance reports from Firestore
 // ============================================================
 export type ComplianceEntry = {

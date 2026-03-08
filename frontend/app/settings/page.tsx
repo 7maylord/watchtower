@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useActiveChainContracts } from "@/hooks/useContractData";
+import { SUPPORTED_CHAINS } from "@/lib/contracts";
 
 const integrations = [
   { name: "Gemini AI", status: true, desc: "Risk analysis & recommendations" },
@@ -21,6 +23,9 @@ const workflows = [
 ];
 
 export default function SettingsPage() {
+  const { contracts, chainId } = useActiveChainContracts();
+  const chainName = SUPPORTED_CHAINS.find((c) => c.id === chainId)?.name ?? "Unknown";
+
   return (
     <DashboardLayout>
       <div className="space-y-6 max-w-4xl">
@@ -56,17 +61,23 @@ export default function SettingsPage() {
         >
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Contract Addresses
+            <span className="ml-2 text-[10px] normal-case font-normal text-muted-foreground">
+              ({chainName})
+            </span>
           </h3>
           <div className="space-y-4">
             {[
-              ["Fund Vault", "0x7a3B...9f2E"],
-              ["Risk Oracle", "0x4c1D...3a8F"],
-              ["Compliance Registry", "0x9e5A...7b4C"],
+              ["Fund Vault", contracts.fundVault],
+              ["Risk Oracle", contracts.riskOracle],
+              ["Compliance Registry", contracts.complianceRegistry],
+              ["Proof of Reserve Oracle", contracts.proofOfReserveOracle],
+              ["CCIP Router", contracts.ccipRouter],
             ].map(([label, addr]) => (
               <div key={label}>
                 <Label className="text-xs text-muted-foreground">{label}</Label>
                 <Input
-                  defaultValue={addr}
+                  readOnly
+                  value={addr}
                   className="mt-1 font-mono bg-muted/50 border-border text-sm"
                 />
               </div>

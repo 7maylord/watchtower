@@ -20,41 +20,44 @@ import DashboardLayout from "@/components/DashboardLayout";
 import RiskGauge from "@/components/RiskGauge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { riskBreakdown, healthAssessments } from "@/lib/mock-data";
 import { CONTRACTS, fundVaultAbi } from "@/lib/contracts";
 import {
   useRiskScore,
   useFundVaultStats,
+  useRiskReports,
+  useTotalAssets,
   formatTimeAgo,
 } from "@/hooks/useContractData";
 
-const aiRecommendations = [
-  {
-    title: "Reduce Concentration",
-    text: "Consider diversifying lending positions across 2-3 additional protocols to reduce single-protocol exposure.",
-  },
-  {
-    title: "Hedge Market Risk",
-    text: "Current market volatility suggests acquiring put options on ETH to hedge downside exposure.",
-  },
-  {
-    title: "Increase Stablecoin Buffer",
-    text: "Maintain a minimum 65% stablecoin allocation during high-volatility periods.",
-  },
+const riskBreakdown = [
+  { factor: "Market Risk", value: 35, color: "hsl(217, 91%, 60%)" },
+  { factor: "Liquidity Risk", value: 22, color: "hsl(260, 60%, 55%)" },
+  { factor: "Concentration Risk", value: 45, color: "hsl(38, 92%, 50%)" },
+  { factor: "Counterparty Risk", value: 18, color: "hsl(142, 71%, 45%)" },
+  { factor: "Smart Contract Risk", value: 28, color: "hsl(0, 84%, 60%)" },
 ];
 
 export default function PortfolioHealth() {
   const { score, timestamp, ipfsHash, isLoading: riskLoading } = useRiskScore();
   const {
-    totalSupply,
     sharePrice,
     isLoading: vaultLoading,
   } = useFundVaultStats();
+  const { totalAssets } = useTotalAssets();
+  const { reports: riskReports, isLoading: reportsLoading } = useRiskReports();
 
-  const displayScore = score ?? 32;
-  const displaySharePrice = sharePrice ?? 1.02;
-  const displayTotalAssets =
-    totalSupply && sharePrice ? (totalSupply * sharePrice) / 1e6 : 2.4;
+  const displayScore = score ?? 0;
+  const displaySharePrice = sharePrice ?? 0;
+  const displayTotalAssets = totalAssets ? totalAssets / 1e6 : 0;
+
+  // Build AI recommendations from latest risk report analysis
+  const latestReport = riskReports[0];
+  const aiRecommendations = latestReport?.analysis
+    ? [{ title: "AI Analysis", text: latestReport.analysis }]
+    : [];
+
+  // Historical assessments from Firestore
+  const healthAssessments = riskReports.slice(0, 10);
 
   const { isConnected } = useAccount();
   const {
@@ -183,19 +186,25 @@ export default function PortfolioHealth() {
               AI Recommendations
             </h3>
             <div className="space-y-3">
-              {aiRecommendations.map((rec, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border border-primary/20 bg-primary/5 p-4"
-                >
-                  <h4 className="text-sm font-semibold text-primary">
-                    {rec.title}
-                  </h4>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {rec.text}
-                  </p>
-                </div>
-              ))}
+              {aiRecommendations.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  No AI recommendations yet — run a Portfolio Health workflow to generate analysis
+                </p>
+              ) : (
+                aiRecommendations.map((rec, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-primary/20 bg-primary/5 p-4"
+                  >
+                    <h4 className="text-sm font-semibold text-primary">
+                      {rec.title}
+                    </h4>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {rec.text}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -290,25 +299,37 @@ export default function PortfolioHealth() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {healthAssessments.map((a, i) => (
-                  <tr key={i} className="hover:bg-muted/20 transition-colors">
-                    <td className="py-3 text-foreground">{a.date}</td>
-                    <td className="py-3 font-mono font-semibold text-foreground">
-                      {a.score}
-                    </td>
-                    <td className="py-3">
-                      <StatusBadge status={a.status} />
-                    </td>
-                    <td className="py-3">
-                      <a
-                        href="#"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        {a.ipfsHash} <ExternalLink className="h-3 w-3" />
-                      </a>
+                {reportsLoading ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                      Loading reports...
                     </td>
                   </tr>
-                ))}
+                ) : healthAssessments.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                      No assessments yet — run a Portfolio Health workflow
+                    </td>
+                  </tr>
+                ) : (
+                  healthAssessments.map((a, i) => (
+                    <tr key={i} className="hover:bg-muted/20 transition-colors">
+                      <td className="py-3 text-foreground">{a.date}</td>
+                      <td className="py-3 font-mono font-semibold text-foreground">
+                        {a.score}
+                      </td>
+                      <td className="py-3">
+                        <StatusBadge status={a.status === "critical" ? "error" : a.status} />
+                      </td>
+                      <td className="py-3">
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {a.documentId}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

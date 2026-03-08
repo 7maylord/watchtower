@@ -15,7 +15,9 @@ import {
 } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatusBadge from "@/components/StatusBadge";
-import { portfolioAllocation as mockAllocation } from "@/lib/mock-data";
+const fallbackAllocation = [
+  { name: "Idle USDC", value: 100, color: "hsl(217, 91%, 60%)" },
+];
 import {
   usePortfolioAllocation,
   useTotalAssets,
@@ -47,13 +49,6 @@ const scatterData = [
   { risk: 70, return: 18.5, name: "Leveraged" },
 ];
 
-const suggestedActions = [
-  "Increase USDC allocation from 40% → 45% to buffer against market downturn",
-  "Reduce Aave V3 lending position by 3% to lower protocol concentration",
-  "Maintain current Uniswap V3 LP position — within acceptable IL range",
-  "Consider adding Compound V3 allocation for lending diversification",
-];
-
 export default function Rebalancing() {
   const { allocation, isLoading: allocLoading } = usePortfolioAllocation();
   const { totalAssets } = useTotalAssets();
@@ -83,9 +78,9 @@ export default function Rebalancing() {
     reset: resetBridge,
   } = useCCIPBridge(address as Address | undefined, parsedAmount);
 
-  const displayAllocation = allocation ?? mockAllocation;
+  const displayAllocation = allocation ?? fallbackAllocation;
   const isLive = allocation !== undefined;
-  const displayTotal = totalAssets ?? 2.4;
+  const displayTotal = totalAssets ?? 0;
 
   const { isConnected } = useAccount();
   const {
@@ -236,31 +231,28 @@ export default function Rebalancing() {
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               AI Recommendation
             </h3>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-4 py-2 text-lg font-bold text-success border border-success/20">
-                HOLD
-              </span>
-              <div>
-                <p className="text-sm text-muted-foreground">Confidence</p>
-                <p className="text-xl font-bold text-foreground">92%</p>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Current portfolio allocation is within optimal risk-adjusted
-              parameters. No immediate rebalancing required. Monitor lending
-              exposure for changes.
-            </p>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Suggested Actions
-            </h4>
-            <ul className="space-y-2">
-              {suggestedActions.map((a, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                  <span className="text-muted-foreground">{a}</span>
-                </li>
-              ))}
-            </ul>
+            {(() => {
+              const latest = rebalancingHistory[0];
+              const action = latest?.action ?? "—";
+              const confidence = latest ? `${(latest.confidence * 100).toFixed(0)}%` : "—";
+              const analysis = latest?.analysis ?? "No analysis yet — run a Rebalancing workflow";
+              return (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-4 py-2 text-lg font-bold text-success border border-success/20">
+                      {action}
+                    </span>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Confidence</p>
+                      <p className="text-xl font-bold text-foreground">{confidence}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {analysis}
+                  </p>
+                </>
+              );
+            })()}
           </div>
         </div>
 

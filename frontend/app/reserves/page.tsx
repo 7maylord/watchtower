@@ -12,8 +12,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
-import { reserveRatioHistory } from "@/lib/mock-data";
-import { useReserveData, formatTimeAgo } from "@/hooks/useContractData";
+import { useReserveData, useReserveReports, formatTimeAgo } from "@/hooks/useContractData";
 import { CONTRACTS } from "@/lib/contracts";
 
 export default function ProofOfReserve() {
@@ -26,9 +25,17 @@ export default function ProofOfReserve() {
     isLoading,
   } = useReserveData();
 
-  const displayRatio = reserveRatio ?? 99.8;
-  const displayOnChain = onChainReserves ?? 2_395_200;
-  const displayCustodian = custodianReserves ?? 2_400_000;
+  const { reports: reserveReports, isLoading: reportsLoading } = useReserveReports();
+
+  // Build chart data from Firestore reserve reports
+  const reserveRatioHistory = reserveReports.map((r) => ({
+    date: r.date,
+    ratio: parseFloat(r.reserveRatio) || 100,
+  }));
+
+  const displayRatio = reserveRatio ?? 0;
+  const displayOnChain = onChainReserves ?? 0;
+  const displayCustodian = custodianReserves ?? 0;
   const displayHealthy = isHealthy ?? true;
 
   // Format for display: if values from contract are in USDC (6 decimals already formatted),
@@ -147,48 +154,58 @@ export default function ProofOfReserve() {
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Reserve Ratio History (30 Days)
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={reserveRatioHistory}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(215, 28%, 17%)"
-              />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                domain={[99, 101]}
-                tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <ReferenceLine
-                y={100}
-                stroke="hsl(142, 71%, 45%)"
-                strokeDasharray="4 4"
-                strokeOpacity={0.5}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(224, 71%, 6%)",
-                  border: "1px solid hsl(215, 28%, 20%)",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                  color: "hsl(213, 31%, 91%)",
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="ratio"
-                stroke="hsl(217, 91%, 60%)"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {reportsLoading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : reserveRatioHistory.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px] text-sm text-muted-foreground">
+              No reserve reports yet — run a Proof of Reserve workflow
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={reserveRatioHistory}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(215, 28%, 17%)"
+                />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  domain={[99, 101]}
+                  tick={{ fontSize: 11, fill: "hsl(215, 20%, 55%)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <ReferenceLine
+                  y={100}
+                  stroke="hsl(142, 71%, 45%)"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.5}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(224, 71%, 6%)",
+                    border: "1px solid hsl(215, 28%, 20%)",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    color: "hsl(213, 31%, 91%)",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="ratio"
+                  stroke="hsl(217, 91%, 60%)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Attestation Details */}
@@ -206,7 +223,7 @@ export default function ProofOfReserve() {
                 "Last Attestation",
                 lastVerified
                   ? formatTimeAgo(lastVerified)
-                  : "Feb 15, 2026 14:32 UTC",
+                  : "Never",
               ],
               [
                 "Oracle Address",
