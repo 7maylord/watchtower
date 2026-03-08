@@ -14,8 +14,6 @@ docs/
 .env.local
 .env.*.local
 
-*.md
-!README.md
 
 # Node modules
 node_modules/

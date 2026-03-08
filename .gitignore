@@ -1,7 +1,4 @@
 
-# Documentation - exclude all .md files except root README.md
-*.md
-#!/README.md
 
 # Environment variables
 .env
