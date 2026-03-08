@@ -10,8 +10,6 @@ import "../interfaces/IComplianceRegistry.sol";
 import "../interfaces/IRiskOracle.sol";
 import "../interfaces/IProofOfReserveOracle.sol";
 
-// ===== CCIP Types (inlined to avoid external dependency) =====
-
 /// @notice Minimal IRouterClient interface for CCIP cross-chain messaging
 interface IRouterClient {
     function ccipSend(
@@ -220,7 +218,9 @@ contract FundVault is IFundVault, ERC20, AccessControl, Pausable {
         if (supply == 0) {
             shares = amount * DECIMAL_OFFSET;
         } else {
-            shares = (amount * DECIMAL_OFFSET * supply) / (totalAssets() * DECIMAL_OFFSET);
+            shares =
+                (amount * DECIMAL_OFFSET * supply) /
+                (totalAssets() * DECIMAL_OFFSET);
         }
 
         // Transfer underlying asset from user
